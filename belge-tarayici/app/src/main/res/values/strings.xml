@@ -7,6 +7,12 @@
     <string name="share">Paylaş</string>
     <string name="empty_title">Belgeni tara</string>
     <string name="empty_subtitle">Aşağıdaki \"BELGE TARA\" düğmesine bas.\nKamera belgeyi otomatik bulur, gölgeleri temizler ve net bir çıktı verir.</string>
+    <string name="mode_original">Orijinal</string>
+    <string name="mode_color">🌓 Gölge Temizle</string>
+    <string name="mode_gray">🩶 Gri</string>
+    <string name="mode_bw">⚫ Siyah-Beyaz</string>
+    <string name="processing">İşleniyor… gölgeler temizleniyor</string>
+    <string name="processing_failed">İşleme başarısız oldu</string>
     <string name="page_count">%1$d sayfa tarandı</string>
     <string name="saved_images">%1$d görsel galeriye kaydedildi</string>
     <string name="saved_pdf">PDF, İndirilenler/BelgeTarayici klasörüne kaydedildi</string>

@@ -57,23 +57,108 @@
                 android:textColor="@color/text_secondary"
                 android:gravity="center" />
         </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/procOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#CCFFFFFF"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <ProgressBar
+                    android:layout_width="48dp"
+                    android:layout_height="48dp" />
+
+                <TextView
+                    android:id="@+id/procText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </FrameLayout>
     </FrameLayout>
 
     <TextView
         android:id="@+id/pageCount"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
+        android:paddingTop="8dp"
         android:gravity="center"
         android:textColor="@color/text_secondary"
         android:visibility="gone" />
+
+    <HorizontalScrollView
+        android:id="@+id/modeBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="6dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeOriginal"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/mode_original"
+                android:textSize="12sp"
+                app:cornerRadius="20dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeColor"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/mode_color"
+                android:textSize="12sp"
+                app:cornerRadius="20dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeGray"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/mode_gray"
+                android:textSize="12sp"
+                app:cornerRadius="20dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeBw"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mode_bw"
+                android:textSize="12sp"
+                app:cornerRadius="20dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnScan"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="8dp"
         android:paddingVertical="14dp"
         android:text="@string/scan"
         android:textSize="17sp"
