@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Belge Tarayıcı</string>
+    <string name="app_name">Eser Lens</string>
     <string name="scan">📷  BELGE TARA</string>
     <string name="save_images">Galeriye\nKaydet</string>
     <string name="save_pdf">PDF\nKaydet</string>
