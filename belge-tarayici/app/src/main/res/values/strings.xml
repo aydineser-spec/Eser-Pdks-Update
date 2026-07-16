@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Belge Tarayıcı</string>
+    <string name="scan">📷  BELGE TARA</string>
+    <string name="save_images">Galeriye\nKaydet</string>
+    <string name="save_pdf">PDF\nKaydet</string>
+    <string name="share">Paylaş</string>
+    <string name="empty_title">Belgeni tara</string>
+    <string name="empty_subtitle">Aşağıdaki \"BELGE TARA\" düğmesine bas.\nKamera belgeyi otomatik bulur, gölgeleri temizler ve net bir çıktı verir.</string>
+    <string name="page_count">%1$d sayfa tarandı</string>
+    <string name="saved_images">%1$d görsel galeriye kaydedildi</string>
+    <string name="saved_pdf">PDF, İndirilenler/BelgeTarayici klasörüne kaydedildi</string>
+    <string name="save_failed">Kaydetme başarısız oldu</string>
+    <string name="error_no_result">Sonuç alınamadı</string>
+    <string name="error_start">Tarayıcı başlatılamadı: %1$s</string>
+</resources>
