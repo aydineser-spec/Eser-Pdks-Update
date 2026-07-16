@@ -48,7 +48,7 @@ object DocEnhancer {
                 for (i in 0 until n) {
                     val b0 = max(1, bg[i])
                     // Kazanc sinirli -> koyu bolgede gureni patlatmaz
-                    val gain = min(2.3, 255.0 / b0)
+                    val gain = min(2.4, 255.0 / b0)
                     val p = sm[i]
                     var r = min(255, (((p ushr 16) and 0xFF) * gain).toInt())
                     var g = min(255, (((p ushr 8) and 0xFF) * gain).toInt())
@@ -58,7 +58,7 @@ object DocEnhancer {
                     val mn = min(r, min(g, b))
                     val sat = mx - mn
                     val lo = (r * 299 + g * 587 + b * 114) / 1000
-                    val wl = clamp01((lo - 195) / 40.0)
+                    val wl = clamp01((lo - 190) / 45.0)
                     val ws = clamp01((30 - sat) / 30.0)
                     val wm = wl * ws
                     if (wm > 0.0) {
@@ -124,7 +124,8 @@ object DocEnhancer {
     }
 
     private fun estimateBackground(lum: IntArray, w: Int, h: Int): IntArray {
-        val step = max(1, min(w, h) / 44)
+        // Ince olcek: kirisik/buruk golgelerini de takip edip siler
+        val step = max(1, min(w, h) / 90)
         val sw = (w + step - 1) / step
         val sh = (h + step - 1) / step
         val small = IntArray(sw * sh)
@@ -149,8 +150,8 @@ object DocEnhancer {
                 small[by * sw + bx] = mx
             }
         }
-        val b1 = boxBlur(small, sw, sh, 2)
-        val b2 = boxBlur(b1, sw, sh, 2)
+        val b1 = boxBlur(small, sw, sh, 1)
+        val b2 = boxBlur(b1, sw, sh, 1)
         val bg = IntArray(w * h)
         for (y in 0 until h) {
             val sy = min(sh - 1, y / step)
