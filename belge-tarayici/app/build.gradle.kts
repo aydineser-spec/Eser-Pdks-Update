@@ -47,4 +47,10 @@ dependencies {
     // Google ML Kit Belge Tarayici motoru: otomatik kenar bulma, perspektif
     // duzeltme, golge/leke temizleme, yazi netlestirme + JPEG & PDF ciktisi.
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+    // Resimden yazi cikarma (OCR).
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    // Metnin dilini otomatik tanima.
+    implementation("com.google.mlkit:language-id:17.0.6")
+    // Cihazda (cevrimdisi) ceviri - 50+ dil.
+    implementation("com.google.mlkit:translate:17.0.3")
 }

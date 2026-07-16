@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
+        binding.btnText.setOnClickListener { openTextScreen() }
 
         updateActionsEnabled(false)
     }
@@ -281,10 +282,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun openTextScreen() {
+        if (pageImages.isEmpty()) return
+        val paths = ArrayList(pageImages.map { it.absolutePath })
+        val intent = Intent(this, TextActivity::class.java)
+        intent.putStringArrayListExtra(TextActivity.EXTRA_IMAGE_PATHS, paths)
+        startActivity(intent)
+    }
+
     private fun updateActionsEnabled(enabled: Boolean) {
         binding.btnSaveImages.isEnabled = enabled
         binding.btnSavePdf.isEnabled = enabled
         binding.btnShare.isEnabled = enabled
+        binding.btnText.isEnabled = enabled
     }
 
     private fun toast(message: String) {
