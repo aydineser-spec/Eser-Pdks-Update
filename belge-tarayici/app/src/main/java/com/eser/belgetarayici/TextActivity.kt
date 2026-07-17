@@ -10,6 +10,7 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.eser.belgetarayici.databinding.ActivityTextBinding
+import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
@@ -169,27 +170,37 @@ class TextActivity : AppCompatActivity() {
             .build()
         val translator = Translation.getClient(options)
         binding.statusText.text = getString(R.string.model_downloading)
+        // Geri bildirimi dogrudan ceviri kutusuna yaz (kullanici burada bakiyor)
+        binding.txtTranslation.setText(getString(R.string.model_downloading))
+        binding.btnTranslate.isEnabled = false
 
-        translator.downloadModelIfNeeded()
+        // Mobil veriyle de indirsin (sadece WiFi sarti yok)
+        val conditions = DownloadConditions.Builder().build()
+        translator.downloadModelIfNeeded(conditions)
             .addOnSuccessListener {
                 translator.translate(text)
                     .addOnSuccessListener { translated ->
                         binding.txtTranslation.setText(translated)
                         binding.progress.visibility = View.GONE
                         binding.statusText.text = getString(R.string.translate_done)
+                        binding.btnTranslate.isEnabled = true
                         translator.close()
                     }
                     .addOnFailureListener { e ->
                         binding.progress.visibility = View.GONE
                         binding.statusText.text = getString(R.string.translate_failed)
-                        toast(e.localizedMessage ?: "")
+                        binding.txtTranslation.setText(getString(R.string.translate_failed))
+                        binding.btnTranslate.isEnabled = true
+                        toast(e.localizedMessage ?: getString(R.string.translate_failed))
                         translator.close()
                     }
             }
             .addOnFailureListener { e ->
                 binding.progress.visibility = View.GONE
                 binding.statusText.text = getString(R.string.model_download_failed)
-                toast(e.localizedMessage ?: "")
+                binding.txtTranslation.setText(getString(R.string.model_download_failed))
+                binding.btnTranslate.isEnabled = true
+                toast(e.localizedMessage ?: getString(R.string.model_download_failed))
                 translator.close()
             }
     }

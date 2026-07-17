@@ -45,7 +45,9 @@ object DocEnhancer {
                 val enh = IntArray(n)
                 for (i in 0 until n) {
                     val b0 = max(1, bg[i])
-                    val gain = min(2.4, 255.0 / b0)
+                    // Dusuk kazanc: koyu/renkli bolgeleri (ornek: mavi bant)
+                    // fazla parlatmaz -> goruntu bozulmaz, yazi net kalir
+                    val gain = min(1.9, 255.0 / b0)
                     val p = px[i]
                     var r = min(255, (((p ushr 16) and 0xFF) * gain).toInt())
                     var g = min(255, (((p ushr 8) and 0xFF) * gain).toInt())
@@ -120,9 +122,9 @@ object DocEnhancer {
     private fun lut(): IntArray {
         val t = IntArray(256)
         for (v in 0..255) {
-            var c = (v - 10) * 1.2 + 5
+            var c = (v - 10) * 1.18 + 5
             if (c < 0.0) c = 0.0 else if (c > 255.0) c = 255.0
-            val g = 255.0 * Math.pow(c / 255.0, 1.15)
+            val g = 255.0 * Math.pow(c / 255.0, 1.05)
             t[v] = if (g < 0.0) 0 else if (g > 255.0) 255 else g.toInt()
         }
         return t
