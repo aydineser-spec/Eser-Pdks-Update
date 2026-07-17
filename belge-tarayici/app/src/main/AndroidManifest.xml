@@ -31,6 +31,11 @@
             android:exported="false"
             android:label="@string/text_title" />
 
+        <activity
+            android:name=".CropActivity"
+            android:exported="false"
+            android:label="@string/crop_title" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

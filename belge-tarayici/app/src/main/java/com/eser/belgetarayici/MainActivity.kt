@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var scannerLauncher: ActivityResultLauncher<IntentSenderRequest>
     private lateinit var importLauncher: ActivityResultLauncher<String>
+    private lateinit var cropLauncher: ActivityResultLauncher<Intent>
 
     // Ham (islenmemis) sayfalar ve o an gosterilen (islenmis) sayfalar
     private val originalImages = mutableListOf<File>()
@@ -70,8 +71,16 @@ class MainActivity : AppCompatActivity() {
             else toast(getString(R.string.no_image_picked))
         }
 
+        // Yamuk kagidi duz A4'e cevir (perspektif duzeltme)
+        cropLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { res ->
+            if (res.resultCode == Activity.RESULT_OK) refreshAfterCrop()
+        }
+
         binding.btnScan.setOnClickListener { startScan() }
         binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
+        binding.btnCrop.setOnClickListener { openCrop() }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
@@ -352,6 +361,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Yamuk belgeyi duzeltmek icin kirpma ekranini ac (ilk sayfa)
+    private fun openCrop() {
+        if (originalImages.isEmpty()) return
+        val intent = Intent(this, CropActivity::class.java)
+        intent.putExtra(CropActivity.EXTRA_PATH, originalImages[0].absolutePath)
+        cropLauncher.launch(intent)
+    }
+
+    // Duzeltme sonrasi: duzeltilmis orijinali tekrar isle ve goster
+    private fun refreshAfterCrop() {
+        if (originalImages.isEmpty()) return
+        originalImages[0].copyTo(pageImages[0], overwrite = true)
+        currentMode = DocEnhancer.Mode.ORIGINAL
+        rebuildPdf()
+        renderPreview()
+        applyMode(DocEnhancer.Mode.COLOR)
+    }
+
     private fun openTextScreen() {
         if (pageImages.isEmpty()) return
         val paths = ArrayList(pageImages.map { it.absolutePath })
@@ -382,6 +409,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSavePdf.isEnabled = has
         binding.btnShare.isEnabled = has
         binding.btnText.isEnabled = has
+        binding.btnCrop.isEnabled = has
         if (has) highlightMode(currentMode)
     }
 

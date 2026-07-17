@@ -23,6 +23,12 @@
     <string name="error_start">Tarayıcı başlatılamadı: %1$s</string>
 
     <string name="get_text">🔤  Yazıyı Al / Çevir</string>
+    <string name="straighten_btn">✂️  Düzelt (Yamuk Kâğıt)</string>
+    <string name="crop_title">Köşeleri belgeye getir</string>
+    <string name="crop_hint">4 yeşil noktayı belgenin köşelerine sürükle, sonra Düzelt\'e bas</string>
+    <string name="do_straighten">DÜZELT</string>
+    <string name="cancel">İptal</string>
+    <string name="straighten_done">Belge düzeltildi</string>
     <string name="text_title">Yazı ve Çeviri</string>
     <string name="recognized_label">Belgeden okunan yazı</string>
     <string name="recognized_hint">Belgeden okunan yazı burada görünecek…</string>
