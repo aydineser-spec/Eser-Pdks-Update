@@ -8,10 +8,11 @@ import kotlin.math.min
  * Belge iyilestirme motoru.
  *
  * Yontem: kagit aydinlatma haritasini (arka plan) tahmin edip isigi
- * duzlestirir (flat-field), boylece golgeler ve parlamalar silinir.
- *  - COLOR: kazanc sinirli isik duzlestirme + kagit beyazlatma + gren azaltma
- *  - GRAY : normalize gri + kontrast
- *  - BW   : Otsu ile temiz siyah-beyaz (metin belgeleri icin)
+ * duzlestirir (flat-field) -> golge/parlama silinir; sonra keskinlestirme
+ * (unsharp mask) ve kontrast ile yazi netlestirilir (tarayici etkisi).
+ *  - COLOR: golge temizle + kagit beyazlat + keskinlestir
+ *  - GRAY : normalize gri + keskinlestir
+ *  - BW   : Otsu ile temiz siyah-beyaz (metin/eski evrak icin)
  */
 object DocEnhancer {
 
@@ -26,13 +27,10 @@ object DocEnhancer {
         val px = IntArray(n)
         src.getPixels(px, 0, w, 0, 0, w, h)
 
-        // Hafif on-gren azaltma (kazanc uygulanmadan once)
-        val sm = boxBlurPixels(px, w, h, 1)
-
-        // Parlaklik
+        // Parlaklik (orijinalden - keskinligi korumak icin on-blur YOK)
         val lum = IntArray(n)
         for (i in 0 until n) {
-            val p = sm[i]
+            val p = px[i]
             val r = (p ushr 16) and 0xFF
             val g = (p ushr 8) and 0xFF
             val b = p and 0xFF
@@ -42,14 +40,13 @@ object DocEnhancer {
         // Kagit aydinlatma haritasi
         val bg = estimateBackground(lum, w, h)
 
-        val out = IntArray(n)
-        when (mode) {
+        return when (mode) {
             Mode.COLOR -> {
+                val enh = IntArray(n)
                 for (i in 0 until n) {
                     val b0 = max(1, bg[i])
-                    // Kazanc sinirli -> koyu bolgede gureni patlatmaz
                     val gain = min(2.4, 255.0 / b0)
-                    val p = sm[i]
+                    val p = px[i]
                     var r = min(255, (((p ushr 16) and 0xFF) * gain).toInt())
                     var g = min(255, (((p ushr 8) and 0xFF) * gain).toInt())
                     var b = min(255, ((p and 0xFF) * gain).toInt())
@@ -58,30 +55,26 @@ object DocEnhancer {
                     val mn = min(r, min(g, b))
                     val sat = mx - mn
                     val lo = (r * 299 + g * 587 + b * 114) / 1000
-                    val wl = clamp01((lo - 190) / 45.0)
-                    val ws = clamp01((30 - sat) / 30.0)
-                    val wm = wl * ws
+                    val wm = clamp01((lo - 190) / 45.0) * clamp01((30 - sat) / 30.0)
                     if (wm > 0.0) {
                         r = (r * (1 - wm) + 255.0 * wm).toInt()
                         g = (g * (1 - wm) + 255.0 * wm).toInt()
                         b = (b * (1 - wm) + 255.0 * wm).toInt()
                     }
-                    // Hafif kontrast
-                    r = contrast(r); g = contrast(g); b = contrast(b)
-                    out[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                    enh[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
                 }
-                // Son hafif gren azaltma
-                return toBitmap(boxBlurPixels(out, w, h, 1), w, h)
+                toBitmap(contrastAll(unsharpMask(enh, w, h, 0.9)), w, h)
             }
             Mode.GRAY -> {
+                val enh = IntArray(n)
                 for (i in 0 until n) {
                     val b0 = max(1, bg[i])
                     var v = lum[i] * 255 / b0
                     if (v > 255) v = 255
                     v = stretch(v)
-                    out[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+                    enh[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
                 }
-                return toBitmap(boxBlurPixels(out, w, h, 1), w, h)
+                toBitmap(contrastAll(unsharpMask(enh, w, h, 0.9)), w, h)
             }
             Mode.BW -> {
                 val norm = IntArray(n)
@@ -92,14 +85,50 @@ object DocEnhancer {
                     norm[i] = v
                 }
                 val t = otsu(norm)
+                val out = IntArray(n)
                 for (i in 0 until n) {
                     val v = if (norm[i] >= t) 255 else 0
                     out[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
                 }
-                return toBitmap(out, w, h)
+                toBitmap(out, w, h)
             }
-            else -> return src
+            else -> src
         }
+    }
+
+    // Unsharp mask: keskinlestirme (out + amount*(out - blur))
+    private fun unsharpMask(a: IntArray, w: Int, h: Int, amount: Double): IntArray {
+        val bl = boxBlurPixels(a, w, h, 2)
+        val out = IntArray(a.size)
+        for (i in a.indices) {
+            val p = a[i]; val q = bl[i]
+            val r = sharpen((p ushr 16) and 0xFF, (q ushr 16) and 0xFF, amount)
+            val g = sharpen((p ushr 8) and 0xFF, (q ushr 8) and 0xFF, amount)
+            val b = sharpen(p and 0xFF, q and 0xFF, amount)
+            out[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+        }
+        return out
+    }
+
+    private fun sharpen(v: Int, blurred: Int, amount: Double): Int {
+        val r = (v + amount * (v - blurred)).toInt()
+        return if (r < 0) 0 else if (r > 255) 255 else r
+    }
+
+    private fun contrastAll(a: IntArray): IntArray {
+        for (i in a.indices) {
+            val p = a[i]
+            val r = contrast((p ushr 16) and 0xFF)
+            val g = contrast((p ushr 8) and 0xFF)
+            val b = contrast(p and 0xFF)
+            a[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+        }
+        return a
+    }
+
+    private fun contrast(v: Int): Int {
+        val r = ((v - 8) * 1.12 + 4).toInt()
+        return if (r < 0) 0 else if (r > 255) 255 else r
     }
 
     private fun toBitmap(px: IntArray, w: Int, h: Int): Bitmap {
@@ -109,11 +138,6 @@ object DocEnhancer {
     }
 
     private fun clamp01(v: Double): Double = if (v < 0) 0.0 else if (v > 1) 1.0 else v
-
-    private fun contrast(v: Int): Int {
-        val r = ((v - 6) * 1.05 + 3).toInt()
-        return if (r < 0) 0 else if (r > 255) 255 else r
-    }
 
     private fun stretch(v: Int): Int {
         val lo = 40
@@ -194,7 +218,6 @@ object DocEnhancer {
         return out
     }
 
-    // ARGB pikselleri uzerinde ayrik (separable) kutu bulaniklastirma
     private fun boxBlurPixels(a: IntArray, w: Int, h: Int, r: Int): IntArray {
         val tr = IntArray(a.size); val tg = IntArray(a.size); val tb = IntArray(a.size)
         for (y in 0 until h) {
