@@ -63,7 +63,7 @@ object DocEnhancer {
                     }
                     enh[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
                 }
-                toBitmap(contrastAll(unsharpMask(enh, w, h, 0.9)), w, h)
+                toBitmap(applyLut(multiScaleSharpen(enh, w, h), lut()), w, h)
             }
             Mode.GRAY -> {
                 val enh = IntArray(n)
@@ -74,7 +74,7 @@ object DocEnhancer {
                     v = stretch(v)
                     enh[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
                 }
-                toBitmap(contrastAll(unsharpMask(enh, w, h, 0.9)), w, h)
+                toBitmap(applyLut(multiScaleSharpen(enh, w, h), lut()), w, h)
             }
             Mode.BW -> {
                 val norm = IntArray(n)
@@ -96,39 +96,47 @@ object DocEnhancer {
         }
     }
 
-    // Unsharp mask: keskinlestirme (out + amount*(out - blur))
-    private fun unsharpMask(a: IntArray, w: Int, h: Int, amount: Double): IntArray {
-        val bl = boxBlurPixels(a, w, h, 2)
+    // Cok-olcekli unsharp mask: ince + genis olcek -> yazi cok daha net
+    private fun multiScaleSharpen(a: IntArray, w: Int, h: Int): IntArray {
+        val b1 = boxBlurPixels(a, w, h, 1)   // ince detay
+        val b2 = boxBlurPixels(a, w, h, 3)   // genis kenar
         val out = IntArray(a.size)
         for (i in a.indices) {
-            val p = a[i]; val q = bl[i]
-            val r = sharpen((p ushr 16) and 0xFF, (q ushr 16) and 0xFF, amount)
-            val g = sharpen((p ushr 8) and 0xFF, (q ushr 8) and 0xFF, amount)
-            val b = sharpen(p and 0xFF, q and 0xFF, amount)
+            val p = a[i]; val q1 = b1[i]; val q2 = b2[i]
+            val r = sh((p ushr 16) and 0xFF, (q1 ushr 16) and 0xFF, (q2 ushr 16) and 0xFF)
+            val g = sh((p ushr 8) and 0xFF, (q1 ushr 8) and 0xFF, (q2 ushr 8) and 0xFF)
+            val b = sh(p and 0xFF, q1 and 0xFF, q2 and 0xFF)
             out[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
         return out
     }
 
-    private fun sharpen(v: Int, blurred: Int, amount: Double): Int {
-        val r = (v + amount * (v - blurred)).toInt()
+    private fun sh(v: Int, b1: Int, b2: Int): Int {
+        val r = (v + 0.8 * (v - b1) + 0.5 * (v - b2)).toInt()
         return if (r < 0) 0 else if (r > 255) 255 else r
     }
 
-    private fun contrastAll(a: IntArray): IntArray {
+    // Kontrast + yazi koyulastirma (gamma) tek LUT'ta
+    private fun lut(): IntArray {
+        val t = IntArray(256)
+        for (v in 0..255) {
+            var c = (v - 10) * 1.2 + 5
+            if (c < 0.0) c = 0.0 else if (c > 255.0) c = 255.0
+            val g = 255.0 * Math.pow(c / 255.0, 1.15)
+            t[v] = if (g < 0.0) 0 else if (g > 255.0) 255 else g.toInt()
+        }
+        return t
+    }
+
+    private fun applyLut(a: IntArray, t: IntArray): IntArray {
         for (i in a.indices) {
             val p = a[i]
-            val r = contrast((p ushr 16) and 0xFF)
-            val g = contrast((p ushr 8) and 0xFF)
-            val b = contrast(p and 0xFF)
+            val r = t[(p ushr 16) and 0xFF]
+            val g = t[(p ushr 8) and 0xFF]
+            val b = t[p and 0xFF]
             a[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
         return a
-    }
-
-    private fun contrast(v: Int): Int {
-        val r = ((v - 8) * 1.12 + 4).toInt()
-        return if (r < 0) 0 else if (r > 255) 255 else r
     }
 
     private fun toBitmap(px: IntArray, w: Int, h: Int): Bitmap {
