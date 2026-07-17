@@ -13,6 +13,11 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // OpenCV native kutuphaneleri: yaygin telefon mimarileri (boyut icin)
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -37,6 +42,14 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    // OpenCV ve ML Kit ayni native kutuphaneyi (libc++_shared.so) getirebilir;
+    // cakismayi onle
+    packaging {
+        jniLibs {
+            pickFirsts += "**/libc++_shared.so"
+        }
+    }
 }
 
 dependencies {
@@ -53,4 +66,7 @@ dependencies {
     implementation("com.google.mlkit:language-id:17.0.6")
     // Cihazda (cevrimdisi) ceviri - 50+ dil.
     implementation("com.google.mlkit:translate:17.0.3")
+    // OpenCV: otomatik kenar tespiti, perspektif duzeltme, CLAHE,
+    // adaptive threshold (Adobe Scan / MS Lens seviyesi isleme).
+    implementation("org.opencv:opencv:4.11.0")
 }

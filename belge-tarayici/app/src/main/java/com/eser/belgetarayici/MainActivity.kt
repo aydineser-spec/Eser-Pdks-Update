@@ -52,6 +52,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // OpenCV'yi arka planda hazirla (native kutuphaneyi yukle)
+        Thread { OpenCvProcessor.ensureInit() }.start()
+
         scannerLauncher = registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
         ) { activityResult ->
@@ -150,9 +153,39 @@ class MainActivity : AppCompatActivity() {
         renderPreview()
         showContent(true)
         binding.pageCount.text = getString(R.string.page_count, pageImages.size)
-        // Tarar taramaz otomatik iyilestir (CamScanner gibi) - kullanici ham
-        // orijinali degil, temizlenmis sonucu gorsun
-        applyMode(DocEnhancer.Mode.COLOR)
+        // Otomatik: belge kenarlarini bul + perspektif duzelt + iyilestir
+        autoPrepare()
+    }
+
+    // Otomatik kenar tespiti + perspektif duzeltme + COLOR iyilestirme (arka plan)
+    private fun autoPrepare() {
+        if (originalImages.isEmpty()) return
+        setBusy(true, getString(R.string.processing))
+        Thread {
+            try {
+                for (i in originalImages.indices) {
+                    val raw = decodeSampled(originalImages[i], 2000)
+                    val cropped = OpenCvProcessor.autoCrop(raw)
+                    FileOutputStream(originalImages[i]).use {
+                        cropped.compress(Bitmap.CompressFormat.JPEG, 95, it)
+                    }
+                    val enh = OpenCvProcessor.process(cropped, DocEnhancer.Mode.COLOR)
+                    FileOutputStream(pageImages[i]).use {
+                        enh.compress(Bitmap.CompressFormat.JPEG, 92, it)
+                    }
+                    if (enh !== cropped) enh.recycle()
+                    if (cropped !== raw) cropped.recycle()
+                    raw.recycle()
+                }
+                rebuildPdf()
+                currentMode = DocEnhancer.Mode.COLOR
+                runOnUiThread {
+                    renderPreview(); setBusy(false, ""); highlightMode(DocEnhancer.Mode.COLOR)
+                }
+            } catch (e: Throwable) {
+                runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
+            }
+        }.start()
     }
 
     // ----------------------------------------------------------------------
@@ -164,8 +197,8 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 for (i in originalImages.indices) {
-                    val src = decodeSampled(originalImages[i], 1700)
-                    val outBmp = DocEnhancer.process(src, mode)
+                    val src = decodeSampled(originalImages[i], 2000)
+                    val outBmp = OpenCvProcessor.process(src, mode)
                     FileOutputStream(pageImages[i]).use { fos ->
                         outBmp.compress(Bitmap.CompressFormat.JPEG, 92, fos)
                     }
