@@ -153,17 +153,37 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnScan"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="14dp"
-        android:text="@string/scan"
-        android:textSize="17sp"
-        app:backgroundTint="@color/primary"
-        app:cornerRadius="14dp" />
+        android:layout_marginTop="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScan"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:paddingVertical="14dp"
+            android:text="@string/scan"
+            android:textSize="15sp"
+            app:backgroundTint="@color/primary"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnImport"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:paddingVertical="14dp"
+            android:text="@string/import_images"
+            android:textSize="15sp"
+            app:cornerRadius="14dp" />
+    </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnText"

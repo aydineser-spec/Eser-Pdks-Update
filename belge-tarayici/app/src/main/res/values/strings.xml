@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Eser Lens</string>
-    <string name="scan">📷  BELGE TARA</string>
+    <string name="scan">📷  Tara</string>
+    <string name="import_images">🖼️  Yükle</string>
+    <string name="no_image_picked">Görüntü seçilmedi</string>
     <string name="save_images">Galeriye\nKaydet</string>
     <string name="save_pdf">PDF\nKaydet</string>
     <string name="share">Paylaş</string>

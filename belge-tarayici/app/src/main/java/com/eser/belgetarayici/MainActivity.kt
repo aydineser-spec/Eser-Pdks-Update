@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var scannerLauncher: ActivityResultLauncher<IntentSenderRequest>
+    private lateinit var importLauncher: ActivityResultLauncher<String>
 
     // Ham (islenmemis) sayfalar ve o an gosterilen (islenmis) sayfalar
     private val originalImages = mutableListOf<File>()
@@ -61,7 +62,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Galeriden / dosyalardan gorsel sec (kamera olmadan)
+        importLauncher = registerForActivityResult(
+            ActivityResultContracts.GetMultipleContents()
+        ) { uris ->
+            if (!uris.isNullOrEmpty()) loadPages(uris)
+            else toast(getString(R.string.no_image_picked))
+        }
+
         binding.btnScan.setOnClickListener { startScan() }
+        binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
@@ -100,6 +110,11 @@ class MainActivity : AppCompatActivity() {
     // Sonucu isle
     // ----------------------------------------------------------------------
     private fun handleScanResult(result: GmsDocumentScanningResult) {
+        loadPages(result.pages?.map { it.imageUri } ?: emptyList())
+    }
+
+    // Taranan veya secilen gorselleri sayfa olarak yukle
+    private fun loadPages(sources: List<Uri>) {
         outputDir.listFiles()?.forEach { it.delete() }
         originalImages.clear()
         pageImages.clear()
@@ -107,9 +122,9 @@ class MainActivity : AppCompatActivity() {
         currentMode = DocEnhancer.Mode.ORIGINAL
 
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        result.pages?.forEachIndexed { index, page ->
+        sources.forEachIndexed { index, uri ->
             val orig = File(outputDir, "orig_${stamp}_${index + 1}.jpg")
-            if (copyUri(page.imageUri, orig)) {
+            if (copyUri(uri, orig)) {
                 originalImages.add(orig)
                 // Baslangicta gosterilen = orijinal
                 val disp = File(outputDir, "belge_${stamp}_${index + 1}.jpg")
