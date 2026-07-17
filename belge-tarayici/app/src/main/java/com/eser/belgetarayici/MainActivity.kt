@@ -141,6 +141,9 @@ class MainActivity : AppCompatActivity() {
         renderPreview()
         showContent(true)
         binding.pageCount.text = getString(R.string.page_count, pageImages.size)
+        // Tarar taramaz otomatik iyilestir (CamScanner gibi) - kullanici ham
+        // orijinali degil, temizlenmis sonucu gorsun
+        applyMode(DocEnhancer.Mode.COLOR)
     }
 
     // ----------------------------------------------------------------------
@@ -152,7 +155,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 for (i in originalImages.indices) {
-                    val src = decodeSampled(originalImages[i], 2400)
+                    val src = decodeSampled(originalImages[i], 1700)
                     val outBmp = DocEnhancer.process(src, mode)
                     FileOutputStream(pageImages[i]).use { fos ->
                         outBmp.compress(Bitmap.CompressFormat.JPEG, 92, fos)
@@ -183,7 +186,7 @@ class MainActivity : AppCompatActivity() {
         try {
             val doc = PdfDocument()
             pageImages.forEachIndexed { index, f ->
-                val bmp = decodeSampled(f, 2400)
+                val bmp = decodeSampled(f, 1700)
                 val info = PdfDocument.PageInfo
                     .Builder(bmp.width, bmp.height, index + 1).create()
                 val page = doc.startPage(info)

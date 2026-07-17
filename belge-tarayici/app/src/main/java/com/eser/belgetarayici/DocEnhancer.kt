@@ -42,22 +42,45 @@ object DocEnhancer {
 
         return when (mode) {
             Mode.COLOR -> {
+                // Beyaz dengesi: kagidin gercek rengini bulup renk lekesini
+                // (pembe/sari/mavi tonu) giderir -> kagit bembeyaz olur
+                val hist = IntArray(256)
+                for (v in lum) hist[v.coerceIn(0, 255)]++
+                val target = (n * 0.75).toInt()
+                var cum = 0; var thr = 200
+                for (t in 0..255) { cum += hist[t]; if (cum >= target) { thr = t; break } }
+                var sr = 0L; var sg = 0L; var sb = 0L; var cnt = 0L
+                for (i in 0 until n) {
+                    if (lum[i] >= thr) {
+                        val p = px[i]
+                        sr += ((p ushr 16) and 0xFF).toLong()
+                        sg += ((p ushr 8) and 0xFF).toLong()
+                        sb += (p and 0xFF).toLong()
+                        cnt++
+                    }
+                }
+                val c = if (cnt > 0L) cnt else 1L
+                val pr = sr.toDouble() / c; val pg = sg.toDouble() / c; val pb = sb.toDouble() / c
+                val grayp = (pr + pg + pb) / 3.0
+                val wr = clampD(grayp / Math.max(1.0, pr), 0.6, 1.6)
+                val wgc = clampD(grayp / Math.max(1.0, pg), 0.6, 1.6)
+                val wbc = clampD(grayp / Math.max(1.0, pb), 0.6, 1.6)
+
                 val enh = IntArray(n)
                 for (i in 0 until n) {
                     val b0 = max(1, bg[i])
-                    // Dusuk kazanc: koyu/renkli bolgeleri (ornek: mavi bant)
-                    // fazla parlatmaz -> goruntu bozulmaz, yazi net kalir
+                    // Dusuk kazanc: koyu/renkli bolgeleri fazla parlatmaz
                     val gain = min(1.9, 255.0 / b0)
                     val p = px[i]
-                    var r = min(255, (((p ushr 16) and 0xFF) * gain).toInt())
-                    var g = min(255, (((p ushr 8) and 0xFF) * gain).toInt())
-                    var b = min(255, ((p and 0xFF) * gain).toInt())
+                    var r = min(255, (((p ushr 16) and 0xFF) * wr * gain).toInt())
+                    var g = min(255, (((p ushr 8) and 0xFF) * wgc * gain).toInt())
+                    var b = min(255, ((p and 0xFF) * wbc * gain).toInt())
                     // Kagit beyazlatma: parlak + dusuk doygunluk -> beyaz
                     val mx = max(r, max(g, b))
                     val mn = min(r, min(g, b))
                     val sat = mx - mn
                     val lo = (r * 299 + g * 587 + b * 114) / 1000
-                    val wm = clamp01((lo - 190) / 45.0) * clamp01((30 - sat) / 30.0)
+                    val wm = clamp01((lo - 185) / 50.0) * clamp01((35 - sat) / 35.0)
                     if (wm > 0.0) {
                         r = (r * (1 - wm) + 255.0 * wm).toInt()
                         g = (g * (1 - wm) + 255.0 * wm).toInt()
@@ -148,6 +171,9 @@ object DocEnhancer {
     }
 
     private fun clamp01(v: Double): Double = if (v < 0) 0.0 else if (v > 1) 1.0 else v
+
+    private fun clampD(v: Double, lo: Double, hi: Double): Double =
+        if (v < lo) lo else if (v > hi) hi else v
 
     private fun stretch(v: Int): Int {
         val lo = 40
