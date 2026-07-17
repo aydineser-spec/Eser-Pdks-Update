@@ -16,10 +16,16 @@ import kotlin.math.min
  */
 object DocEnhancer {
 
-    enum class Mode { ORIGINAL, COLOR, GRAY, BW }
+    enum class Mode { ORIGINAL, COLOR, GRAY, BW, RECEIPT, BOOK }
 
     fun process(src: Bitmap, mode: Mode): Bitmap {
         if (mode == Mode.ORIGINAL) return src
+        // OpenCV yoksa Fis/Kitap icin en yakin saf-Kotlin karsiligi
+        val eff = when (mode) {
+            Mode.RECEIPT -> Mode.BW
+            Mode.BOOK -> Mode.GRAY
+            else -> mode
+        }
 
         val w = src.width
         val h = src.height
@@ -40,7 +46,7 @@ object DocEnhancer {
         // Kagit aydinlatma haritasi
         val bg = estimateBackground(lum, w, h)
 
-        return when (mode) {
+        return when (eff) {
             Mode.COLOR -> {
                 // Beyaz dengesi: kagidin gercek rengini bulup renk lekesini
                 // (pembe/sari/mavi tonu) giderir -> kagit bembeyaz olur

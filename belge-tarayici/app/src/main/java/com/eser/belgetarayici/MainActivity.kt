@@ -93,6 +93,8 @@ class MainActivity : AppCompatActivity() {
         binding.modeColor.setOnClickListener { applyMode(DocEnhancer.Mode.COLOR) }
         binding.modeGray.setOnClickListener { applyMode(DocEnhancer.Mode.GRAY) }
         binding.modeBw.setOnClickListener { applyMode(DocEnhancer.Mode.BW) }
+        binding.modeReceipt.setOnClickListener { applyMode(DocEnhancer.Mode.RECEIPT) }
+        binding.modeBook.setOnClickListener { applyMode(DocEnhancer.Mode.BOOK) }
 
         showContent(false)
     }
@@ -283,7 +285,9 @@ class MainActivity : AppCompatActivity() {
             DocEnhancer.Mode.ORIGINAL to binding.modeOriginal,
             DocEnhancer.Mode.COLOR to binding.modeColor,
             DocEnhancer.Mode.GRAY to binding.modeGray,
-            DocEnhancer.Mode.BW to binding.modeBw
+            DocEnhancer.Mode.BW to binding.modeBw,
+            DocEnhancer.Mode.RECEIPT to binding.modeReceipt,
+            DocEnhancer.Mode.BOOK to binding.modeBook
         )
         map.forEach { (m, btn) -> btn.alpha = if (m == mode) 1f else 0.5f }
     }

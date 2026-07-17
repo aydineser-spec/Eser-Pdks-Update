@@ -123,6 +123,8 @@ object OpenCvProcessor {
                 DocEnhancer.Mode.COLOR -> colorMode(src)
                 DocEnhancer.Mode.GRAY -> grayMode(src)
                 DocEnhancer.Mode.BW -> bwMode(src)
+                DocEnhancer.Mode.RECEIPT -> receiptMode(src)
+                DocEnhancer.Mode.BOOK -> bookMode(src)
                 else -> src
             }
         } catch (e: Throwable) {
@@ -191,6 +193,41 @@ object OpenCvProcessor {
         val k = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(2.0, 2.0))
         Imgproc.morphologyEx(bw, bw, Imgproc.MORPH_OPEN, k)
         val outRgba = Mat(); Imgproc.cvtColor(bw, outRgba, Imgproc.COLOR_GRAY2RGBA)
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(outRgba, out)
+        return out
+    }
+
+    // Fis: soluk termal baski icin guclu CLAHE + ayarli adaptive threshold
+    private fun receiptMode(src: Bitmap): Bitmap {
+        val rgba = Mat(); Utils.bitmapToMat(src, rgba)
+        val gray = Mat(); Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY)
+        Imgproc.createCLAHE(3.5, Size(8.0, 8.0)).apply(gray, gray)
+        val den = Mat(); Imgproc.bilateralFilter(gray, den, 5, 45.0, 45.0)
+        val bw = Mat()
+        // daha kucuk blok + dusuk C: soluk yazilari yakalar
+        Imgproc.adaptiveThreshold(
+            den, bw, 255.0,
+            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 21, 9.0
+        )
+        val k = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(2.0, 2.0))
+        Imgproc.morphologyEx(bw, bw, Imgproc.MORPH_OPEN, k)
+        val outRgba = Mat(); Imgproc.cvtColor(bw, outRgba, Imgproc.COLOR_GRAY2RGBA)
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(outRgba, out)
+        return out
+    }
+
+    // Kitap: cilt golgesini alan guclu CLAHE + keskinlestirme (gri, dogal sayfa)
+    private fun bookMode(src: Bitmap): Bitmap {
+        val rgba = Mat(); Utils.bitmapToMat(src, rgba)
+        val gray = Mat(); Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY)
+        Imgproc.createCLAHE(3.5, Size(8.0, 8.0)).apply(gray, gray)
+        // kagidi beyaza yaklastir
+        Core.normalize(gray, gray, 0.0, 255.0, Core.NORM_MINMAX)
+        val blur = Mat(); Imgproc.GaussianBlur(gray, blur, Size(0.0, 0.0), 3.0)
+        Core.addWeighted(gray, 1.6, blur, -0.6, 0.0, gray)
+        val outRgba = Mat(); Imgproc.cvtColor(gray, outRgba, Imgproc.COLOR_GRAY2RGBA)
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(outRgba, out)
         return out

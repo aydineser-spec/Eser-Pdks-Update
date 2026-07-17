@@ -13,6 +13,8 @@
     <string name="mode_color">🌓 Gölge Temizle</string>
     <string name="mode_gray">🩶 Gri</string>
     <string name="mode_bw">⚫ Siyah-Beyaz</string>
+    <string name="mode_receipt">🧾 Fiş</string>
+    <string name="mode_book">📚 Kitap</string>
     <string name="processing">İşleniyor… gölgeler temizleniyor</string>
     <string name="processing_failed">İşleme başarısız oldu</string>
     <string name="page_count">%1$d sayfa tarandı</string>
