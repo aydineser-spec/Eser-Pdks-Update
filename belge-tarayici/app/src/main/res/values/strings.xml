@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Eser Lens</string>
+    <string name="scan">📷  Tara</string>
+    <string name="import_images">🖼️  Yükle</string>
+    <string name="no_image_picked">Görüntü seçilmedi</string>
+    <string name="save_images">Galeriye\nKaydet</string>
+    <string name="save_pdf">PDF\nKaydet</string>
+    <string name="share">Paylaş</string>
+    <string name="empty_title">Belgeni tara</string>
+    <string name="empty_subtitle">Aşağıdaki \"BELGE TARA\" düğmesine bas.\nKamera belgeyi otomatik bulur, gölgeleri temizler ve net bir çıktı verir.</string>
+    <string name="mode_original">Orijinal</string>
+    <string name="mode_color">🌓 Gölge Temizle</string>
+    <string name="mode_gray">🩶 Gri</string>
+    <string name="mode_bw">⚫ Siyah-Beyaz</string>
+    <string name="mode_receipt">🧾 Fiş</string>
+    <string name="mode_book">📚 Kitap</string>
+    <string name="processing">İşleniyor… gölgeler temizleniyor</string>
+    <string name="processing_failed">İşleme başarısız oldu</string>
+    <string name="page_count">%1$d sayfa tarandı</string>
+    <string name="saved_images">%1$d görsel galeriye kaydedildi</string>
+    <string name="saved_pdf">PDF, İndirilenler/BelgeTarayici klasörüne kaydedildi</string>
+    <string name="save_failed">Kaydetme başarısız oldu</string>
+    <string name="error_no_result">Sonuç alınamadı</string>
+    <string name="error_start">Tarayıcı başlatılamadı: %1$s</string>
+
+    <string name="get_text">🔤  Yazıyı Al / Çevir</string>
+    <string name="straighten_btn">✂️  Düzelt (Yamuk Kâğıt)</string>
+    <string name="crop_title">Köşeleri belgeye getir</string>
+    <string name="crop_hint">4 yeşil noktayı belgenin köşelerine sürükle, sonra Düzelt\'e bas</string>
+    <string name="do_straighten">DÜZELT</string>
+    <string name="cancel">İptal</string>
+    <string name="straighten_done">Belge düzeltildi</string>
+    <string name="text_title">Yazı ve Çeviri</string>
+    <string name="recognized_label">Belgeden okunan yazı</string>
+    <string name="recognized_hint">Belgeden okunan yazı burada görünecek…</string>
+    <string name="copy_text">Yazıyı kopyala</string>
+    <string name="translate_to">Şu dile çevir:</string>
+    <string name="translate">Çevir</string>
+    <string name="translation_hint">Çeviri burada görünecek…</string>
+    <string name="copy_translation">Çeviriyi kopyala</string>
+    <string name="ocr_running">Yazı okunuyor…</string>
+    <string name="ocr_done">Yazı okundu ✓</string>
+    <string name="ocr_empty">Belgede okunabilir yazı bulunamadı</string>
+    <string name="detecting_language">Dil algılanıyor…</string>
+    <string name="model_downloading">Çeviri modeli indiriliyor… (ilk seferde internet gerekir)</string>
+    <string name="model_download_failed">Çeviri modeli indirilemedi (internet gerekli)</string>
+    <string name="translate_done">Çeviri hazır ✓</string>
+    <string name="translate_failed">Çeviri yapılamadı</string>
+    <string name="no_text_to_translate">Çevrilecek yazı yok</string>
+    <string name="copied">Panoya kopyalandı</string>
+</resources>
