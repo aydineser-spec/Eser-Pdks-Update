@@ -230,11 +230,14 @@ class MainActivity : AppCompatActivity() {
     // ----------------------------------------------------------------------
     // PDF'i o anki sayfalardan yeniden uret
     // ----------------------------------------------------------------------
-    private fun rebuildPdf() {
-        try {
+    // PDF uret; basarili ise null, hata varsa sebep dondurur
+    private fun rebuildPdf(): String? {
+        if (pageImages.isEmpty()) return "sayfa yok"
+        return try {
             val doc = PdfDocument()
             pageImages.forEachIndexed { index, f ->
-                val bmp = decodeSampled(f, 1700)
+                // PDF sayfasi makul boyutta (bellek/limit sorununu onler)
+                val bmp = decodeSampled(f, 1654)
                 val info = PdfDocument.PageInfo
                     .Builder(bmp.width, bmp.height, index + 1).create()
                 val page = doc.startPage(info)
@@ -246,10 +249,12 @@ class MainActivity : AppCompatActivity() {
             val out = File(outputDir, "belge_$stamp.pdf")
             FileOutputStream(out).use { doc.writeTo(it) }
             doc.close()
+            if (!out.exists() || out.length() == 0L) return "pdf bos"
             pdfFile?.delete()
             pdfFile = out
+            null
         } catch (e: Throwable) {
-            // PDF uretilemezse gorseller yine calisir
+            e.javaClass.simpleName + ": " + (e.message ?: "")
         }
     }
 
@@ -342,9 +347,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun savePdfToDownloads() {
-        val pdf = pdfFile
+        var pdf = pdfFile
         if (pdf == null || !pdf.exists() || pdf.length() == 0L) {
-            toast(getString(R.string.save_failed) + " (PDF yok)"); return
+            // Son bir deneme: PDF'i yeniden uret; olmazsa gercek sebebi goster
+            val e = rebuildPdf()
+            pdf = pdfFile
+            if (pdf == null || !pdf.exists() || pdf.length() == 0L) {
+                toast(getString(R.string.save_failed) + " (PDF: " + (e ?: "yok") + ")"); return
+            }
         }
         if (needsLegacyPerm()) { pendingSave = 2; requestLegacyPerm(); return }
         val err = savePdfInternal(pdf)
