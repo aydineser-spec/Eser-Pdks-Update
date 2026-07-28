@@ -3,6 +3,7 @@ package com.eser.belgetarayici
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfDocument
@@ -19,6 +20,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.eser.belgetarayici.databinding.ActivityMainBinding
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -43,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private val pageImages = mutableListOf<File>()
     private var pdfFile: File? = null
     private var currentMode = DocEnhancer.Mode.ORIGINAL
+    private var pendingSave = 0  // 1=gorseller, 2=pdf (izin sonrasi devam icin)
 
     private val outputDir: File
         get() = File(filesDir, "output").apply { mkdirs() }
@@ -297,15 +301,21 @@ class MainActivity : AppCompatActivity() {
     // ----------------------------------------------------------------------
     private fun saveImagesToGallery() {
         if (pageImages.isEmpty()) return
+        if (needsLegacyPerm()) { pendingSave = 1; requestLegacyPerm(); return }
         var ok = 0
-        for (image in pageImages) if (saveImageToGallery(image)) ok++
-        toast(getString(R.string.saved_images, ok))
+        var err: String? = null
+        for (image in pageImages) {
+            val e = saveOneImage(image)
+            if (e == null) ok++ else err = e
+        }
+        if (ok > 0) toast(getString(R.string.saved_images, ok))
+        else toast(getString(R.string.save_failed) + " (" + (err ?: "?") + ")")
     }
 
-    private fun saveImageToGallery(file: File): Boolean {
+    private fun saveOneImage(file: File): String? {
         return try {
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, file.name)
+            val cv = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, uniqueName(file.name))
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(
@@ -315,64 +325,100 @@ class MainActivity : AppCompatActivity() {
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
             }
-            val resolver = contentResolver
-            val uri = resolver.insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values
-            ) ?: return false
-            resolver.openOutputStream(uri)?.use { out ->
+            val uri = contentResolver.insert(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv
+            ) ?: return "insert=null"
+            contentResolver.openOutputStream(uri)?.use { out ->
                 file.inputStream().use { it.copyTo(out) }
-            }
+            } ?: return "stream=null"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                resolver.update(uri, values, null, null)
+                cv.clear(); cv.put(MediaStore.Images.Media.IS_PENDING, 0)
+                contentResolver.update(uri, cv, null, null)
             }
-            true
-        } catch (e: Exception) {
-            false
+            null
+        } catch (e: Throwable) {
+            e.javaClass.simpleName + ": " + (e.message ?: "")
         }
     }
 
     private fun savePdfToDownloads() {
-        val pdf = pdfFile ?: return
-        val saved = try {
+        val pdf = pdfFile
+        if (pdf == null || !pdf.exists() || pdf.length() == 0L) {
+            toast(getString(R.string.save_failed) + " (PDF yok)"); return
+        }
+        if (needsLegacyPerm()) { pendingSave = 2; requestLegacyPerm(); return }
+        val err = savePdfInternal(pdf)
+        if (err == null) toast(getString(R.string.saved_pdf))
+        else toast(getString(R.string.save_failed) + " (" + err + ")")
+    }
+
+    private fun savePdfInternal(pdf: File): String? {
+        return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val values = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, pdf.name)
-                    put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                val cv = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueName(pdf.name))
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
                     put(
-                        MediaStore.Downloads.RELATIVE_PATH,
+                        MediaStore.MediaColumns.RELATIVE_PATH,
                         Environment.DIRECTORY_DOWNLOADS + "/EserLens"
                     )
-                    put(MediaStore.Downloads.IS_PENDING, 1)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
-                val resolver = contentResolver
-                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                if (uri != null) {
-                    resolver.openOutputStream(uri)?.use { out ->
-                        pdf.inputStream().use { it.copyTo(out) }
-                    }
-                    values.clear()
-                    values.put(MediaStore.Downloads.IS_PENDING, 0)
-                    resolver.update(uri, values, null, null)
-                    true
-                } else false
+                val uri = contentResolver.insert(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv
+                ) ?: return "insert=null"
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    pdf.inputStream().use { it.copyTo(out) }
+                } ?: return "stream=null"
+                cv.clear(); cv.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                contentResolver.update(uri, cv, null, null)
+                null
             } else {
                 val dir = File(
                     Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS
                     ), "EserLens"
                 ).apply { mkdirs() }
-                val dest = File(dir, pdf.name)
-                pdf.inputStream().use { input ->
-                    dest.outputStream().use { input.copyTo(it) }
-                }
-                true
+                val dest = File(dir, uniqueName(pdf.name))
+                pdf.inputStream().use { input -> dest.outputStream().use { input.copyTo(it) } }
+                null
             }
-        } catch (e: Exception) {
-            false
+        } catch (e: Throwable) {
+            e.javaClass.simpleName + ": " + (e.message ?: "")
         }
-        toast(if (saved) getString(R.string.saved_pdf) else getString(R.string.save_failed))
+    }
+
+    private fun uniqueName(base: String): String {
+        val stamp = System.currentTimeMillis().toString().takeLast(5)
+        val dot = base.lastIndexOf('.')
+        return if (dot > 0) base.substring(0, dot) + "_" + stamp + base.substring(dot)
+        else base + "_" + stamp
+    }
+
+    private fun needsLegacyPerm(): Boolean =
+        Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+            ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+
+    private fun requestLegacyPerm() {
+        ActivityCompat.requestPermissions(
+            this, arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 42
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 42 && grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            when (pendingSave) { 1 -> saveImagesToGallery(); 2 -> savePdfToDownloads() }
+        } else if (requestCode == 42) {
+            toast(getString(R.string.save_failed) + " (izin verilmedi)")
+        }
+        pendingSave = 0
     }
 
     private fun sharePdf() {
