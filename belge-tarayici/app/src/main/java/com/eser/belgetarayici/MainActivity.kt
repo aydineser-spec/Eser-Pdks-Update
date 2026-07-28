@@ -230,26 +230,14 @@ class MainActivity : AppCompatActivity() {
     // ----------------------------------------------------------------------
     // PDF'i o anki sayfalardan yeniden uret
     // ----------------------------------------------------------------------
-    // PDF uret; basarili ise null, hata varsa sebep dondurur
+    // PDF uret; basarili ise null, hata varsa sebep dondurur.
+    // JPEG'i dogrudan PDF'e gomer (JpegPdf) -> bellek kullanmaz, cokmez.
     private fun rebuildPdf(): String? {
         if (pageImages.isEmpty()) return "sayfa yok"
         return try {
-            val doc = PdfDocument()
-            pageImages.forEachIndexed { index, f ->
-                // PDF sayfasi makul boyutta (bellek/limit sorununu onler)
-                val bmp = decodeSampled(f, 1654)
-                val info = PdfDocument.PageInfo
-                    .Builder(bmp.width, bmp.height, index + 1).create()
-                val page = doc.startPage(info)
-                page.canvas.drawBitmap(bmp, 0f, 0f, null)
-                doc.finishPage(page)
-                bmp.recycle()
-            }
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val out = File(outputDir, "belge_$stamp.pdf")
-            FileOutputStream(out).use { doc.writeTo(it) }
-            doc.close()
-            if (!out.exists() || out.length() == 0L) return "pdf bos"
+            if (!JpegPdf.build(pageImages, out)) return "pdf uretilemedi"
             pdfFile?.delete()
             pdfFile = out
             null
