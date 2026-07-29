@@ -27,6 +27,8 @@ object OpenCvProcessor {
 
     @Volatile private var ready = false
 
+    fun isReady(): Boolean = ready
+
     fun ensureInit(): Boolean {
         if (!ready) {
             ready = try { OpenCVLoader.initLocal() } catch (e: Throwable) { false }

@@ -163,35 +163,38 @@ class MainActivity : AppCompatActivity() {
         autoPrepare()
     }
 
-    // Otomatik kenar tespiti + perspektif duzeltme + COLOR iyilestirme (arka plan)
+    // Otomatik COLOR iyilestirme (arka plan). Otomatik kirpma YOK: TARA (ML Kit)
+    // zaten perspektifi duzeltir; yamuk kagit icin elle "Duzelt" kullanilir.
     private fun autoPrepare() {
         if (originalImages.isEmpty()) return
         setBusy(true, getString(R.string.processing))
         Thread {
             try {
                 for (i in originalImages.indices) {
-                    val raw = decodeSampled(originalImages[i], 2000)
-                    val cropped = OpenCvProcessor.autoCrop(raw)
-                    FileOutputStream(originalImages[i]).use {
-                        cropped.compress(Bitmap.CompressFormat.JPEG, 95, it)
-                    }
-                    val enh = OpenCvProcessor.process(cropped, DocEnhancer.Mode.COLOR)
+                    val src = decodeSampled(originalImages[i], 1600)
+                    val enh = OpenCvProcessor.process(src, DocEnhancer.Mode.COLOR)
                     FileOutputStream(pageImages[i]).use {
                         enh.compress(Bitmap.CompressFormat.JPEG, 92, it)
                     }
-                    if (enh !== cropped) enh.recycle()
-                    if (cropped !== raw) cropped.recycle()
-                    raw.recycle()
+                    if (enh !== src) enh.recycle()
+                    src.recycle()
                 }
                 rebuildPdf()
                 currentMode = DocEnhancer.Mode.COLOR
                 runOnUiThread {
-                    renderPreview(); setBusy(false, ""); highlightMode(DocEnhancer.Mode.COLOR)
+                    renderPreview(); setBusy(false, "")
+                    highlightMode(DocEnhancer.Mode.COLOR); updatePageInfo()
                 }
             } catch (e: Throwable) {
                 runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
             }
         }.start()
+    }
+
+    // Sayfa sayisi + motor durumu (OpenCV yuklendi mi) goster
+    private fun updatePageInfo() {
+        val eng = if (OpenCvProcessor.isReady()) "HD" else "temel"
+        binding.pageCount.text = getString(R.string.page_count, pageImages.size) + "  ·  " + eng
     }
 
     // ----------------------------------------------------------------------
@@ -203,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 for (i in originalImages.indices) {
-                    val src = decodeSampled(originalImages[i], 2000)
+                    val src = decodeSampled(originalImages[i], 1600)
                     val outBmp = OpenCvProcessor.process(src, mode)
                     FileOutputStream(pageImages[i]).use { fos ->
                         outBmp.compress(Bitmap.CompressFormat.JPEG, 92, fos)
@@ -217,6 +220,7 @@ class MainActivity : AppCompatActivity() {
                     renderPreview()
                     setBusy(false, "")
                     highlightMode(mode)
+                    updatePageInfo()
                 }
             } catch (e: Throwable) {
                 runOnUiThread {
