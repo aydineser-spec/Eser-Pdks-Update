@@ -52,15 +52,15 @@ object OpenCvProcessor {
             else gray.copyTo(small)
 
             Imgproc.GaussianBlur(small, small, Size(5.0, 5.0), 0.0)
-            val edges = Mat(); Imgproc.Canny(small, edges, 75.0, 200.0)
-            Imgproc.dilate(edges, edges, Mat(), Point(-1.0, -1.0), 1)
+            val edges = Mat(); Imgproc.Canny(small, edges, 60.0, 180.0)
+            Imgproc.dilate(edges, edges, Mat(), Point(-1.0, -1.0), 2)
 
             val contours = ArrayList<MatOfPoint>()
             Imgproc.findContours(edges, contours, Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE)
 
             val imgArea = small.width().toDouble() * small.height()
             var best: Array<Point>? = null
-            var bestArea = imgArea * 0.25   // en az %25 alan
+            var bestArea = imgArea * 0.15   // en az %15 alan
             for (c in contours) {
                 val c2 = MatOfPoint2f(*c.toArray())
                 val peri = Imgproc.arcLength(c2, true)
@@ -82,6 +82,10 @@ object OpenCvProcessor {
             val hL = dist(ordered[0], ordered[3]); val hR = dist(ordered[1], ordered[2])
             val ow = max(wTop, wBot).toInt().coerceAtLeast(80)
             val oh = max(hL, hR).toInt().coerceAtLeast(80)
+
+            // Bozuk/dejenere kirpmayi onle: asiri oranli dikdortgeni reddet
+            val ratio = ow.toDouble() / oh.toDouble()
+            if (ratio > 6.0 || ratio < 1.0 / 6.0) return src
 
             val srcPts = MatOfPoint2f(ordered[0], ordered[1], ordered[2], ordered[3])
             val dstPts = MatOfPoint2f(

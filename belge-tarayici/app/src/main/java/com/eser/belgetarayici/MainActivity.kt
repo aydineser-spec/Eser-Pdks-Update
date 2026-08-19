@@ -163,21 +163,29 @@ class MainActivity : AppCompatActivity() {
         autoPrepare()
     }
 
-    // Otomatik COLOR iyilestirme (arka plan). Otomatik kirpma YOK: TARA (ML Kit)
-    // zaten perspektifi duzeltir; yamuk kagit icin elle "Duzelt" kullanilir.
+    // Otomatik belge yakalama (yandaki evraklari disla) + COLOR iyilestirme.
+    // autoCrop yalniz belgeyi guvenle bulunca kirpar; bulamazsa dokunmaz.
     private fun autoPrepare() {
         if (originalImages.isEmpty()) return
         setBusy(true, getString(R.string.processing))
         Thread {
             try {
                 for (i in originalImages.indices) {
-                    val src = decodeSampled(originalImages[i], 1600)
-                    val enh = OpenCvProcessor.process(src, DocEnhancer.Mode.COLOR)
+                    val raw = decodeSampled(originalImages[i], 1600)
+                    // Ana belgeyi otomatik kirp (yandaki evraklar/clutter cikar)
+                    val cropped = OpenCvProcessor.autoCrop(raw)
+                    if (cropped !== raw) {
+                        FileOutputStream(originalImages[i]).use {
+                            cropped.compress(Bitmap.CompressFormat.JPEG, 95, it)
+                        }
+                    }
+                    val enh = OpenCvProcessor.process(cropped, DocEnhancer.Mode.COLOR)
                     FileOutputStream(pageImages[i]).use {
                         enh.compress(Bitmap.CompressFormat.JPEG, 92, it)
                     }
-                    if (enh !== src) enh.recycle()
-                    src.recycle()
+                    if (enh !== cropped) enh.recycle()
+                    if (cropped !== raw) cropped.recycle()
+                    raw.recycle()
                 }
                 rebuildPdf()
                 currentMode = DocEnhancer.Mode.COLOR
