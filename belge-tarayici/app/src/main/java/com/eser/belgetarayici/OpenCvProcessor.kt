@@ -144,17 +144,18 @@ object OpenCvProcessor {
         val rgba = Mat(); Utils.bitmapToMat(src, rgba)
         val rgb = Mat(); Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)
 
+        // TEK luminans arka plani ile bol (renk oranlari korunur -> mor/pembe
+        // kayma OLMAZ). Per-kanal bolme renk lekesi yapiyordu.
         val chans = ArrayList<Mat>(); Core.split(rgb, chans)
         val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(41.0, 41.0))
+        val lum = Mat(); Imgproc.cvtColor(rgb, lum, Imgproc.COLOR_RGB2GRAY)
+        val bg = Mat()
+        Imgproc.morphologyEx(lum, bg, Imgproc.MORPH_CLOSE, kernel)
+        Imgproc.GaussianBlur(bg, bg, Size(0.0, 0.0), 21.0)
+        val bgF = Mat(); bg.convertTo(bgF, CvType.CV_32F)
+        Core.add(bgF, Scalar(1.0), bgF)
         for (i in 0 until 3) {
-            // Arka plan aydinlatma (yazilari yutar, kagit isigi kalir)
-            val bg = Mat()
-            Imgproc.morphologyEx(chans[i], bg, Imgproc.MORPH_CLOSE, kernel)
-            Imgproc.GaussianBlur(bg, bg, Size(0.0, 0.0), 21.0)
-            // kanal / arka plan * 255 -> isik esitlenir, golge gider
             val chF = Mat(); chans[i].convertTo(chF, CvType.CV_32F)
-            val bgF = Mat(); bg.convertTo(bgF, CvType.CV_32F)
-            Core.add(bgF, Scalar(1.0), bgF)
             Core.divide(chF, bgF, chF)
             Core.multiply(chF, Scalar(255.0), chF)
             chF.convertTo(chans[i], CvType.CV_8U)
@@ -170,9 +171,9 @@ object OpenCvProcessor {
             Core.multiply(
                 rgb,
                 Scalar(
-                    clamp(g / max(1.0, m.`val`[0]), 0.8, 1.3),
-                    clamp(g / max(1.0, m.`val`[1]), 0.8, 1.3),
-                    clamp(g / max(1.0, m.`val`[2]), 0.8, 1.3)
+                    clamp(g / max(1.0, m.`val`[0]), 0.95, 1.08),
+                    clamp(g / max(1.0, m.`val`[1]), 0.95, 1.08),
+                    clamp(g / max(1.0, m.`val`[2]), 0.95, 1.08)
                 ),
                 rgb
             )
