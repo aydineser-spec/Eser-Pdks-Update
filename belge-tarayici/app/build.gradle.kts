@@ -50,6 +50,11 @@ android {
             pickFirsts += "**/libc++_shared.so"
         }
     }
+
+    // ONNX modeli sikistirilmasin (dogrudan okunabilsin)
+    androidResources {
+        noCompress += "onnx"
+    }
 }
 
 dependencies {
@@ -69,4 +74,6 @@ dependencies {
     // OpenCV: otomatik kenar tespiti, perspektif duzeltme, CLAHE,
     // adaptive threshold (Adobe Scan / MS Lens seviyesi isleme).
     implementation("org.opencv:opencv:4.11.0")
+    // ONNX Runtime: UVDoc AI dewarp modelini cihazda calistirir (buruk/kivrik duzeltme)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.23.0")
 }

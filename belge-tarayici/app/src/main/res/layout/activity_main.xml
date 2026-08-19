@@ -218,6 +218,17 @@
         app:cornerRadius="14dp" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDewarp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:paddingVertical="12dp"
+        android:text="@string/dewarp_btn"
+        android:textSize="15sp"
+        app:cornerRadius="14dp" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnText"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"

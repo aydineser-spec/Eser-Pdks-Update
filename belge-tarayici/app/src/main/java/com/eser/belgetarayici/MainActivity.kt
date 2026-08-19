@@ -88,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnScan.setOnClickListener { startScan() }
         binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
         binding.btnCrop.setOnClickListener { openCrop() }
+        binding.btnDewarp.setOnClickListener { runDewarp() }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
@@ -462,6 +463,34 @@ class MainActivity : AppCompatActivity() {
         cropLauncher.launch(intent)
     }
 
+    // AI ile kivrik/buruk belgeyi duzlestir (tum sayfalar), sonra tekrar iyilestir
+    private fun runDewarp() {
+        if (originalImages.isEmpty()) return
+        setBusy(true, getString(R.string.dewarping))
+        Thread {
+            try {
+                for (i in originalImages.indices) {
+                    val raw = decodeSampled(originalImages[i], 1600)
+                    val flat = DewarpAI.dewarp(this, raw)
+                    if (flat !== raw) {
+                        FileOutputStream(originalImages[i]).use {
+                            flat.compress(Bitmap.CompressFormat.JPEG, 95, it)
+                        }
+                        flat.recycle()
+                    }
+                    raw.recycle()
+                }
+                // Duzlestirilmis orijinali mevcut modla yeniden isle
+                val keep = if (currentMode == DocEnhancer.Mode.ORIGINAL)
+                    DocEnhancer.Mode.COLOR else currentMode
+                currentMode = DocEnhancer.Mode.ORIGINAL
+                runOnUiThread { setBusy(false, ""); applyMode(keep) }
+            } catch (e: Throwable) {
+                runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
+            }
+        }.start()
+    }
+
     // Duzeltme sonrasi: duzeltilmis orijinali tekrar isle ve goster
     private fun refreshAfterCrop() {
         if (originalImages.isEmpty()) return
@@ -503,6 +532,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnShare.isEnabled = has
         binding.btnText.isEnabled = has
         binding.btnCrop.isEnabled = has
+        binding.btnDewarp.isEnabled = has
         if (has) highlightMode(currentMode)
     }
 
