@@ -28,6 +28,8 @@
     <string name="straighten_btn">✂️  Düzelt (Yamuk Kâğıt)</string>
     <string name="dewarp_btn">🪄  Düzleştir (AI — Kıvrık/Buruk)</string>
     <string name="dewarping">Yapay zeka düzleştiriyor…</string>
+    <string name="enhance_ai_btn">✨  AI İyileştir (Gölge Sil / Tarayıcı)</string>
+    <string name="enhancing_ai">Yapay zeka iyileştiriyor…</string>
     <string name="reset_btn">↩️  Sıfırla (Orijinale Dön)</string>
     <string name="rotate_btn">🔄  Döndür (90°)</string>
     <string name="rotating">Döndürülüyor…</string>

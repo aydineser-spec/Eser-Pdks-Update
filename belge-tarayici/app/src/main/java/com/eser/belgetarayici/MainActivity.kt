@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
         binding.btnCrop.setOnClickListener { openCrop() }
         binding.btnDewarp.setOnClickListener { runDewarp() }
+        binding.btnEnhanceAi.setOnClickListener { runEnhanceAI() }
         binding.btnRotate.setOnClickListener { rotatePages() }
         binding.btnReset.setOnClickListener { resetToOriginal() }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
@@ -472,6 +473,36 @@ class MainActivity : AppCompatActivity() {
         cropLauncher.launch(intent)
     }
 
+    // DocShadow AI ile golge sil + tarayici gorunumu (tum sayfalar)
+    private fun runEnhanceAI() {
+        if (originalImages.isEmpty()) return
+        setBusy(true, getString(R.string.enhancing_ai))
+        Thread {
+            try {
+                for (i in originalImages.indices) {
+                    val raw = decodeSampled(originalImages[i], 1600)
+                    val clean = EnhanceAI.enhance(this, raw)
+                    FileOutputStream(originalImages[i]).use {
+                        clean.compress(Bitmap.CompressFormat.JPEG, 95, it)
+                    }
+                    FileOutputStream(pageImages[i]).use {
+                        clean.compress(Bitmap.CompressFormat.JPEG, 92, it)
+                    }
+                    if (clean !== raw) clean.recycle()
+                    raw.recycle()
+                }
+                rebuildPdf()
+                currentMode = DocEnhancer.Mode.ORIGINAL
+                runOnUiThread {
+                    renderPreview(); setBusy(false, "")
+                    highlightMode(DocEnhancer.Mode.ORIGINAL); updatePageInfo()
+                }
+            } catch (e: Throwable) {
+                runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
+            }
+        }.start()
+    }
+
     // Tum sayfalari 90 derece dondur (yan/donuk belgeyi dik yap)
     private fun rotatePages() {
         if (originalImages.isEmpty()) return
@@ -579,6 +610,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnText.isEnabled = has
         binding.btnCrop.isEnabled = has
         binding.btnDewarp.isEnabled = has
+        binding.btnEnhanceAi.isEnabled = has
         binding.btnRotate.isEnabled = has
         binding.btnReset.isEnabled = has
         if (has) highlightMode(currentMode)
