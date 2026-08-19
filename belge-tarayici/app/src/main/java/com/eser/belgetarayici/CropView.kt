@@ -57,8 +57,9 @@ class CropView(context: Context, attrs: AttributeSet? = null) : View(context, at
     }
 
     private fun initCorners() {
+        // Kadrajin tamamini kapsa (kullanici tum A4'u gorsun), cok kucuk pay
         val r = drawRect
-        val ix = r.width() * 0.08f; val iy = r.height() * 0.08f
+        val ix = r.width() * 0.02f; val iy = r.height() * 0.02f
         corners[0].set(r.left + ix, r.top + iy)
         corners[1].set(r.right - ix, r.top + iy)
         corners[2].set(r.right - ix, r.bottom - iy)
@@ -89,12 +90,15 @@ class CropView(context: Context, attrs: AttributeSet? = null) : View(context, at
         val x = e.x; val y = e.y
         when (e.action) {
             MotionEvent.ACTION_DOWN -> {
-                dragIndex = -1; var best = touchR
+                // En yakin koseyi sec (esik yok - dokunmak hep bir koseyi tutar)
+                dragIndex = 0; var best = Float.MAX_VALUE
                 for (i in 0..3) {
                     val d = hypot(x - corners[i].x, y - corners[i].y)
                     if (d < best) { best = d; dragIndex = i }
                 }
-                return dragIndex != -1
+                // Ebeveyn kaydirma dokunmayi calmasin
+                parent?.requestDisallowInterceptTouchEvent(true)
+                return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (dragIndex != -1) {

@@ -42,7 +42,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cropLauncher: ActivityResultLauncher<Intent>
 
     // Ham (islenmemis) sayfalar ve o an gosterilen (islenmis) sayfalar
-    private val originalImages = mutableListOf<File>()
+    private val rawImages = mutableListOf<File>()       // hic dokunulmamis kopya (Sifirla icin)
+    private val originalImages = mutableListOf<File>()   // isleme tabani (kirp/dewarp buraya yazilir)
     private val pageImages = mutableListOf<File>()
     private var pdfFile: File? = null
     private var currentMode = DocEnhancer.Mode.ORIGINAL
@@ -89,6 +90,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
         binding.btnCrop.setOnClickListener { openCrop() }
         binding.btnDewarp.setOnClickListener { runDewarp() }
+        binding.btnReset.setOnClickListener { resetToOriginal() }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
@@ -135,6 +137,7 @@ class MainActivity : AppCompatActivity() {
     // Taranan veya secilen gorselleri sayfa olarak yukle
     private fun loadPages(sources: List<Uri>) {
         outputDir.listFiles()?.forEach { it.delete() }
+        rawImages.clear()
         originalImages.clear()
         pageImages.clear()
         pdfFile = null
@@ -145,6 +148,10 @@ class MainActivity : AppCompatActivity() {
             val orig = File(outputDir, "orig_${stamp}_${index + 1}.jpg")
             if (copyUri(uri, orig)) {
                 originalImages.add(orig)
+                // Hic dokunulmamis kopya (Sifirla ile geri donmek icin)
+                val ham = File(outputDir, "ham_${stamp}_${index + 1}.jpg")
+                orig.copyTo(ham, overwrite = true)
+                rawImages.add(ham)
                 // Baslangicta gosterilen = orijinal
                 val disp = File(outputDir, "belge_${stamp}_${index + 1}.jpg")
                 orig.copyTo(disp, overwrite = true)
@@ -463,6 +470,16 @@ class MainActivity : AppCompatActivity() {
         cropLauncher.launch(intent)
     }
 
+    // Tum islemleri geri al: ham (dokunulmamis) kopyalardan basla
+    private fun resetToOriginal() {
+        if (rawImages.isEmpty()) return
+        for (i in originalImages.indices) {
+            if (i < rawImages.size) rawImages[i].copyTo(originalImages[i], overwrite = true)
+        }
+        currentMode = DocEnhancer.Mode.ORIGINAL
+        applyMode(DocEnhancer.Mode.COLOR)
+    }
+
     // AI ile kivrik/buruk belgeyi duzlestir (tum sayfalar), sonra tekrar iyilestir
     private fun runDewarp() {
         if (originalImages.isEmpty()) return
@@ -471,13 +488,14 @@ class MainActivity : AppCompatActivity() {
             try {
                 for (i in originalImages.indices) {
                     val raw = decodeSampled(originalImages[i], 1600)
-                    val flat = DewarpAI.dewarp(this, raw)
-                    if (flat !== raw) {
-                        FileOutputStream(originalImages[i]).use {
-                            flat.compress(Bitmap.CompressFormat.JPEG, 95, it)
-                        }
-                        flat.recycle()
+                    // UVDoc kadraji dolu belge bekler: once otomatik kirp, sonra duzlestir
+                    val cropped = OpenCvProcessor.autoCrop(raw)
+                    val flat = DewarpAI.dewarp(this, cropped)
+                    FileOutputStream(originalImages[i]).use {
+                        flat.compress(Bitmap.CompressFormat.JPEG, 95, it)
                     }
+                    if (flat !== cropped) flat.recycle()
+                    if (cropped !== raw) cropped.recycle()
                     raw.recycle()
                 }
                 // Duzlestirilmis orijinali mevcut modla yeniden isle
@@ -533,6 +551,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnText.isEnabled = has
         binding.btnCrop.isEnabled = has
         binding.btnDewarp.isEnabled = has
+        binding.btnReset.isEnabled = has
         if (has) highlightMode(currentMode)
     }
 

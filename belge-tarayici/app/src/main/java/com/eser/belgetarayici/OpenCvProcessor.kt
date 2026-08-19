@@ -178,9 +178,9 @@ object OpenCvProcessor {
             )
         }
 
-        // Keskinlik (yaziyi netlestir)
-        val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 3.0)
-        Core.addWeighted(rgb, 1.5, blur, -0.5, 0.0, rgb)
+        // Keskinlik (hafif - yazi 'dolma kalem' gibi kalinlasmasin)
+        val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 2.0)
+        Core.addWeighted(rgb, 1.25, blur, -0.25, 0.0, rgb)
 
         val outRgba = Mat(); Imgproc.cvtColor(rgb, outRgba, Imgproc.COLOR_RGB2RGBA)
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
