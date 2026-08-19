@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Build
@@ -90,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
         binding.btnCrop.setOnClickListener { openCrop() }
         binding.btnDewarp.setOnClickListener { runDewarp() }
+        binding.btnRotate.setOnClickListener { rotatePages() }
         binding.btnReset.setOnClickListener { resetToOriginal() }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
@@ -470,6 +472,32 @@ class MainActivity : AppCompatActivity() {
         cropLauncher.launch(intent)
     }
 
+    // Tum sayfalari 90 derece dondur (yan/donuk belgeyi dik yap)
+    private fun rotatePages() {
+        if (originalImages.isEmpty()) return
+        setBusy(true, getString(R.string.rotating))
+        Thread {
+            try {
+                for (i in originalImages.indices) {
+                    val bmp = decodeSampled(originalImages[i], 2000)
+                    val m = Matrix().apply { postRotate(90f) }
+                    val rot = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+                    FileOutputStream(originalImages[i]).use {
+                        rot.compress(Bitmap.CompressFormat.JPEG, 95, it)
+                    }
+                    if (rot !== bmp) rot.recycle()
+                    bmp.recycle()
+                }
+                val keep = if (currentMode == DocEnhancer.Mode.ORIGINAL)
+                    DocEnhancer.Mode.COLOR else currentMode
+                currentMode = DocEnhancer.Mode.ORIGINAL
+                runOnUiThread { setBusy(false, ""); applyMode(keep) }
+            } catch (e: Throwable) {
+                runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
+            }
+        }.start()
+    }
+
     // Tum islemleri geri al: ham (dokunulmamis) kopyalardan basla
     private fun resetToOriginal() {
         if (rawImages.isEmpty()) return
@@ -551,6 +579,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnText.isEnabled = has
         binding.btnCrop.isEnabled = has
         binding.btnDewarp.isEnabled = has
+        binding.btnRotate.isEnabled = has
         binding.btnReset.isEnabled = has
         if (has) highlightMode(currentMode)
     }
