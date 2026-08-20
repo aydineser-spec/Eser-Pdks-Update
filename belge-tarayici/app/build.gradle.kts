@@ -11,8 +11,9 @@ android {
         applicationId = "com.eser.belgetarayici"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Her CI derlemesinde artan surum no -> Android "guncelleme" olarak gorur
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
 
         // OpenCV native kutuphaneleri: yaygin telefon mimarileri (boyut icin)
         ndk {
@@ -20,8 +21,22 @@ android {
         }
     }
 
+    // Sabit imza anahtari: her derleme AYNI imzayla -> silmeden ustune guncellenir
+    signingConfigs {
+        create("eser") {
+            storeFile = file("eserlens.jks")
+            storePassword = "eserlens"
+            keyAlias = "eserlens"
+            keyPassword = "eserlens"
+        }
+    }
+
     buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("eser")
+        }
         release {
+            signingConfig = signingConfigs.getByName("eser")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
