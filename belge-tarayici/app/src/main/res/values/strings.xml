@@ -33,6 +33,12 @@
     <string name="reset_btn">↩️  Sıfırla (Orijinale Dön)</string>
     <string name="rotate_btn">🔄  Döndür (90°)</string>
     <string name="rotating">Döndürülüyor…</string>
+    <string name="tool_crop">✂️\nDüzelt</string>
+    <string name="tool_dewarp">🪄\nDüzleştir</string>
+    <string name="tool_enhance">✨\nİyileştir</string>
+    <string name="tool_rotate">🔄\nDöndür</string>
+    <string name="tool_reset">↩️\nSıfırla</string>
+    <string name="tool_text">🔤\nYazı</string>
     <string name="crop_title">Köşeleri belgeye getir</string>
     <string name="crop_hint">4 yeşil noktayı belgenin köşelerine sürükle, sonra Düzelt\'e bas</string>
     <string name="do_straighten">DÜZELT</string>

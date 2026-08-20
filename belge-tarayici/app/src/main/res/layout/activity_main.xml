@@ -205,75 +205,112 @@
             app:cornerRadius="14dp" />
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCrop"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+    <!-- Kompakt arac izgarasi: 2 satir x 3 kare tus (onizleme buyusun) -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="12dp"
-        android:text="@string/straighten_btn"
-        android:textSize="15sp"
-        app:cornerRadius="14dp" />
+        android:layout_marginTop="8dp">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnDewarp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="12dp"
-        android:text="@string/dewarp_btn"
-        android:textSize="15sp"
-        app:cornerRadius="14dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCrop"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="2"
+            android:paddingVertical="8dp"
+            android:text="@string/tool_crop"
+            android:textSize="11sp"
+            app:cornerRadius="12dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnEnhanceAi"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="12dp"
-        android:text="@string/enhance_ai_btn"
-        android:textSize="15sp"
-        app:cornerRadius="14dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDewarp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="2"
+            android:paddingVertical="8dp"
+            android:text="@string/tool_dewarp"
+            android:textSize="11sp"
+            app:backgroundTint="@color/primary"
+            app:cornerRadius="12dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnRotate"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="12dp"
-        android:text="@string/rotate_btn"
-        android:textSize="15sp"
-        app:cornerRadius="14dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEnhanceAi"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="2"
+            android:paddingVertical="8dp"
+            android:text="@string/tool_enhance"
+            android:textSize="11sp"
+            app:backgroundTint="@color/primary"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnReset"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="12dp"
-        android:text="@string/reset_btn"
-        android:textSize="15sp"
-        app:cornerRadius="14dp" />
+        android:layout_marginTop="8dp">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnText"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:paddingVertical="12dp"
-        android:text="@string/get_text"
-        android:textSize="15sp"
-        app:cornerRadius="14dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRotate"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="2"
+            android:paddingVertical="8dp"
+            android:text="@string/tool_rotate"
+            android:textSize="11sp"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnReset"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="2"
+            android:paddingVertical="8dp"
+            android:text="@string/tool_reset"
+            android:textSize="11sp"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnText"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="2"
+            android:paddingVertical="8dp"
+            android:text="@string/tool_text"
+            android:textSize="11sp"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
