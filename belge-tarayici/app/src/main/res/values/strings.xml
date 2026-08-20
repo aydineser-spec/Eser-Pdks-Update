@@ -39,6 +39,8 @@
     <string name="tool_rotate">🔄\nDöndür</string>
     <string name="tool_reset">↩️\nSıfırla</string>
     <string name="tool_text">🔤\nYazı</string>
+    <string name="magic_btn">✨  SİHİRLİ TARA  (Hepsi Otomatik)</string>
+    <string name="magic_busy">Sihirli işlem: kırp → düzleştir → gölge sil…</string>
     <string name="crop_title">Köşeleri belgeye getir</string>
     <string name="crop_hint">4 yeşil noktayı belgenin köşelerine sürükle, sonra Düzelt\'e bas</string>
     <string name="do_straighten">DÜZELT</string>

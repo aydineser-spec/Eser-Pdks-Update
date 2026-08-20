@@ -90,6 +90,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnScan.setOnClickListener { startScan() }
         binding.btnImport.setOnClickListener { importLauncher.launch("image/*") }
         binding.btnCrop.setOnClickListener { openCrop() }
+        binding.btnMagic.setOnClickListener { runMagic() }
         binding.btnDewarp.setOnClickListener { runDewarp() }
         binding.btnEnhanceAi.setOnClickListener { runEnhanceAI() }
         binding.btnRotate.setOnClickListener { rotatePages() }
@@ -503,6 +504,44 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    // SIHIRLI TARA: tek tuşta tüm zincir -> oto-kırp + AI düzleştir + AI gölge sil
+    private fun runMagic() {
+        if (originalImages.isEmpty()) return
+        setBusy(true, getString(R.string.magic_busy))
+        Thread {
+            try {
+                for (i in originalImages.indices) {
+                    var bmp = decodeSampled(originalImages[i], 1600)
+                    // 1) Belgeyi otomatik bul + kırp + eğikliği düzelt
+                    val cropped = OpenCvProcessor.autoCrop(bmp)
+                    if (cropped !== bmp) { bmp.recycle(); bmp = cropped }
+                    // 2) AI ile kıvrık/buruk düzleştir (UVDoc)
+                    val flat = DewarpAI.dewarp(this, bmp)
+                    if (flat !== bmp) { bmp.recycle(); bmp = flat }
+                    // 3) AI ile gölge sil + tarayıcı görünümü (DocShadow)
+                    val enh = EnhanceAI.enhance(this, bmp)
+                    if (enh !== bmp) { bmp.recycle(); bmp = enh }
+                    // Sonucu hem işleme tabanına hem gösterime yaz
+                    FileOutputStream(originalImages[i]).use {
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 95, it)
+                    }
+                    FileOutputStream(pageImages[i]).use {
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 92, it)
+                    }
+                    bmp.recycle()
+                }
+                rebuildPdf()
+                currentMode = DocEnhancer.Mode.ORIGINAL
+                runOnUiThread {
+                    renderPreview(); setBusy(false, "")
+                    highlightMode(DocEnhancer.Mode.ORIGINAL); updatePageInfo()
+                }
+            } catch (e: Throwable) {
+                runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
+            }
+        }.start()
+    }
+
     // Tum sayfalari 90 derece dondur (yan/donuk belgeyi dik yap)
     private fun rotatePages() {
         if (originalImages.isEmpty()) return
@@ -609,6 +648,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnShare.isEnabled = has
         binding.btnText.isEnabled = has
         binding.btnCrop.isEnabled = has
+        binding.btnMagic.isEnabled = has
         binding.btnDewarp.isEnabled = has
         binding.btnEnhanceAi.isEnabled = has
         binding.btnRotate.isEnabled = has

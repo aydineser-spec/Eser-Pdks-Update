@@ -235,6 +235,20 @@
             app:cornerRadius="14dp" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnMagic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:paddingVertical="14dp"
+        android:text="@string/magic_btn"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        app:backgroundTint="@color/accent"
+        app:cornerRadius="14dp" />
+
     <!-- Kompakt arac izgarasi: 2 satir x 3 kare tus (guneste okunur: kalin yazi) -->
     <LinearLayout
         android:layout_width="match_parent"
