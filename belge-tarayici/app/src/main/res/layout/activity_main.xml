@@ -119,7 +119,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:text="@string/mode_original"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
                 android:textSize="12sp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1.5dp"
                 app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -129,7 +133,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:text="@string/mode_color"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
                 android:textSize="12sp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1.5dp"
                 app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -139,7 +147,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:text="@string/mode_gray"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
                 android:textSize="12sp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1.5dp"
                 app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -149,7 +161,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:text="@string/mode_bw"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
                 android:textSize="12sp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1.5dp"
                 app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -159,7 +175,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:text="@string/mode_receipt"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
                 android:textSize="12sp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1.5dp"
                 app:cornerRadius="20dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -168,7 +188,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/mode_book"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
                 android:textSize="12sp"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1.5dp"
                 app:cornerRadius="20dp" />
         </LinearLayout>
     </HorizontalScrollView>
@@ -188,6 +212,8 @@
             android:layout_marginEnd="6dp"
             android:paddingVertical="14dp"
             android:text="@string/scan"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
             android:textSize="15sp"
             app:backgroundTint="@color/primary"
             app:cornerRadius="14dp" />
@@ -201,11 +227,15 @@
             android:layout_marginStart="6dp"
             android:paddingVertical="14dp"
             android:text="@string/import_images"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
             android:textSize="15sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="14dp" />
     </LinearLayout>
 
-    <!-- Kompakt arac izgarasi: 2 satir x 3 kare tus (onizleme buyusun) -->
+    <!-- Kompakt arac izgarasi: 2 satir x 3 kare tus (guneste okunur: kalin yazi) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -225,7 +255,11 @@
             android:maxLines="2"
             android:paddingVertical="8dp"
             android:text="@string/tool_crop"
-            android:textSize="11sp"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -239,7 +273,9 @@
             android:maxLines="2"
             android:paddingVertical="8dp"
             android:text="@string/tool_dewarp"
-            android:textSize="11sp"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="12sp"
             app:backgroundTint="@color/primary"
             app:cornerRadius="12dp" />
 
@@ -254,8 +290,10 @@
             android:maxLines="2"
             android:paddingVertical="8dp"
             android:text="@string/tool_enhance"
-            android:textSize="11sp"
-            app:backgroundTint="@color/primary"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            app:backgroundTint="@color/accent"
             app:cornerRadius="12dp" />
     </LinearLayout>
 
@@ -278,7 +316,11 @@
             android:maxLines="2"
             android:paddingVertical="8dp"
             android:text="@string/tool_rotate"
-            android:textSize="11sp"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -293,7 +335,11 @@
             android:maxLines="2"
             android:paddingVertical="8dp"
             android:text="@string/tool_reset"
-            android:textSize="11sp"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -308,7 +354,11 @@
             android:maxLines="2"
             android:paddingVertical="8dp"
             android:text="@string/tool_text"
-            android:textSize="11sp"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="12dp" />
     </LinearLayout>
 
@@ -327,8 +377,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
+            android:maxLines="2"
             android:text="@string/save_images"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
             android:textSize="12sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -338,8 +393,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginHorizontal="6dp"
+            android:maxLines="2"
             android:text="@string/save_pdf"
+            android:textColor="@color/primary_dark"
+            android:textStyle="bold"
             android:textSize="12sp"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="2dp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -349,6 +409,8 @@
             android:layout_weight="1"
             android:layout_marginStart="6dp"
             android:text="@string/share"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
             android:textSize="12sp"
             app:backgroundTint="@color/accent"
             app:cornerRadius="12dp" />
