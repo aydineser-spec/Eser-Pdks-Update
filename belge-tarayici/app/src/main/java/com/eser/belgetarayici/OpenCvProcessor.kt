@@ -179,9 +179,13 @@ object OpenCvProcessor {
             )
         }
 
+        // Kontrast/koyuluk: yaziyi siyahlastir, kagidi beyazlat, kalan golge bandini al
+        // (out = 1.4*in - 45) -> "soluk/silik" gorunum biter
+        rgb.convertTo(rgb, -1, 1.4, -45.0)
+
         // Keskinlik (hafif - yazi 'dolma kalem' gibi kalinlasmasin)
         val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 2.0)
-        Core.addWeighted(rgb, 1.25, blur, -0.25, 0.0, rgb)
+        Core.addWeighted(rgb, 1.3, blur, -0.3, 0.0, rgb)
 
         val outRgba = Mat(); Imgproc.cvtColor(rgb, outRgba, Imgproc.COLOR_RGB2RGBA)
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
