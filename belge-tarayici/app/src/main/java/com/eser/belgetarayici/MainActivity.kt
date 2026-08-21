@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnEnhanceAi.setOnClickListener { runEnhanceAI() }
         binding.btnRotate.setOnClickListener { rotatePages() }
         binding.btnReset.setOnClickListener { resetToOriginal() }
+        binding.panelHandle.setOnClickListener { togglePanel() }
         binding.btnSaveImages.setOnClickListener { saveImagesToGallery() }
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
@@ -540,6 +541,15 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }
             }
         }.start()
+    }
+
+    private var panelOpen = true
+    // Alt arac panelini gizle/goster (evrak tam ekran gorunsun)
+    private fun togglePanel() {
+        panelOpen = !panelOpen
+        binding.controlsPanel.visibility = if (panelOpen) View.VISIBLE else View.GONE
+        binding.panelHandle.text =
+            getString(if (panelOpen) R.string.panel_hide else R.string.panel_show)
     }
 
     // Tum sayfalari 90 derece dondur (yan/donuk belgeyi dik yap)

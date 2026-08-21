@@ -89,6 +89,27 @@
         </FrameLayout>
     </FrameLayout>
 
+    <!-- Tutamak: tiklayinca alt panel acilir/kapanir (evrak buyusun) -->
+    <TextView
+        android:id="@+id/panelHandle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingVertical="10dp"
+        android:text="@string/panel_hide"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:background="@color/primary"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <LinearLayout
+        android:id="@+id/controlsPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
     <TextView
         android:id="@+id/pageCount"
         android:layout_width="match_parent"
@@ -428,5 +449,6 @@
             android:textSize="12sp"
             app:backgroundTint="@color/accent"
             app:cornerRadius="12dp" />
+    </LinearLayout>
     </LinearLayout>
 </LinearLayout>
