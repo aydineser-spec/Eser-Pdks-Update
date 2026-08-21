@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
@@ -13,7 +14,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.Gravity
 import android.view.View
+import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -287,19 +291,62 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderPreview() {
         binding.previewContainer.removeAllViews()
-        val margin = (12 * resources.displayMetrics.density).toInt()
-        for (image in pageImages) {
-            val iv = ImageView(this).apply {
+        val d = resources.displayMetrics.density
+        val margin = (12 * d).toInt()
+        val pad = (8 * d).toInt()
+        pageImages.forEachIndexed { index, image ->
+            val frame = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { bottomMargin = margin }
+            }
+            val iv = ImageView(this).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
                 adjustViewBounds = true
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 setImageBitmap(decodeSampled(image, 1200))
             }
-            binding.previewContainer.addView(iv)
+            frame.addView(iv)
+            val del = Button(this).apply {
+                text = getString(R.string.delete_page)
+                textSize = 13f
+                isAllCaps = false
+                setTextColor(Color.WHITE)
+                setBackgroundColor(Color.parseColor("#E0D32F2F"))
+                minWidth = 0; minHeight = 0
+                setPadding(pad + pad / 2, pad / 2, pad + pad / 2, pad / 2)
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).apply { gravity = Gravity.TOP or Gravity.END; topMargin = pad; marginEnd = pad }
+                setOnClickListener { deletePage(index) }
+            }
+            frame.addView(del)
+            binding.previewContainer.addView(frame)
         }
+    }
+
+    // Bir sayfayi sil (tum listelerden + dosyalar), PDF ve onizlemeyi tazele
+    private fun deletePage(index: Int) {
+        if (index < 0 || index >= pageImages.size) return
+        pageImages.getOrNull(index)?.delete()
+        originalImages.getOrNull(index)?.delete()
+        rawImages.getOrNull(index)?.delete()
+        if (index < pageImages.size) pageImages.removeAt(index)
+        if (index < originalImages.size) originalImages.removeAt(index)
+        if (index < rawImages.size) rawImages.removeAt(index)
+        if (pageImages.isEmpty()) {
+            pdfFile?.delete(); pdfFile = null
+            showContent(false)
+            return
+        }
+        rebuildPdf()
+        renderPreview()
+        updatePageInfo()
     }
 
     private fun highlightMode(mode: DocEnhancer.Mode) {
