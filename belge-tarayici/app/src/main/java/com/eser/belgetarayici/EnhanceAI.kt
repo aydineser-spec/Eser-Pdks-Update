@@ -8,6 +8,7 @@ import ai.onnxruntime.OrtSession
 import org.opencv.android.Utils
 import org.opencv.core.CvType
 import org.opencv.core.Mat
+import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.nio.FloatBuffer
@@ -81,6 +82,13 @@ object EnhanceAI {
             }
             val outSmall = Mat(rh, rw, CvType.CV_8UC3); outSmall.put(0, 0, outPix)
             val outFull = Mat(); Imgproc.resize(outSmall, outFull, Size(imgW.toDouble(), imgH.toDouble()))
+
+            // Gren/kumlanmayi temizle + kagidi beyazlat (cizgi cizimde benekli gorunum gitsin)
+            Imgproc.medianBlur(outFull, outFull, 3)
+            val g = Mat(); Imgproc.cvtColor(outFull, g, Imgproc.COLOR_RGB2GRAY)
+            val mask = Mat(); Imgproc.threshold(g, mask, 222.0, 255.0, Imgproc.THRESH_BINARY)
+            outFull.setTo(Scalar(255.0, 255.0, 255.0), mask)
+
             val outRgba = Mat(); Imgproc.cvtColor(outFull, outRgba, Imgproc.COLOR_RGB2RGBA)
             val out = Bitmap.createBitmap(imgW, imgH, Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(outRgba, out)
