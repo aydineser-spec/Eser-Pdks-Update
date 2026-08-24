@@ -65,6 +65,14 @@ class MainActivity : AppCompatActivity() {
         // OpenCV'yi arka planda hazirla (native kutuphaneyi yukle)
         Thread { OpenCvProcessor.ensureInit() }.start()
 
+        // Toolbar'daki Ayarlar dislisi
+        binding.toolbar.inflateMenu(R.menu.main_menu)
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.action_settings) {
+                startActivity(Intent(this, SettingsActivity::class.java)); true
+            } else false
+        }
+
         scannerLauncher = registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
         ) { activityResult ->
@@ -177,8 +185,8 @@ class MainActivity : AppCompatActivity() {
         renderPreview()
         showContent(true)
         binding.pageCount.text = getString(R.string.page_count, pageImages.size)
-        // Otomatik: belge kenarlarini bul + perspektif duzelt + iyilestir
-        autoPrepare()
+        // Ayarda "otomatik Sihirli Tara" acikse tam AI islem, degilse hafif hazirlik
+        if (AiConfig.autoMagic(this)) runMagic() else autoPrepare()
     }
 
     // Otomatik belge yakalama (yandaki evraklari disla) + COLOR iyilestirme.

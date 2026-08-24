@@ -1,15 +1,14 @@
 package com.eser.belgetarayici
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
-import android.text.InputType
 import android.util.Base64
 import android.view.View
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -25,18 +24,13 @@ import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
 /**
- * Claude ile belgeyi oku/anla. Presetler (fatura/tapu/ceviri) + serbest soru,
- * Haiku (hizli/ucuz) veya Sonnet (guclu) secimi. Kullanicinin kendi anahtari.
+ * Belgeyi AI ile oku/anla. Saglayici (Gemini/Claude), model ve anahtar Ayarlar'dan gelir.
+ * Presetler (fatura/tapu/ceviri) + serbest soru. Sadece belgedeki bilgi kullanilir.
  */
 class AiReadActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PATH = "path"
-        private const val HAIKU = "claude-haiku-4-5-20251001"
-        private const val SONNET = "claude-sonnet-5"
-        private const val PREFS = "eserlens"
-        private const val KEY = "anthropic_key"
-        private const val USE_SONNET = "use_sonnet"
 
         private const val P_READ =
             "Sen bir belge okuma yardımcısısın. Ekteki belgeyi incele ve SADECE görüntüde " +
@@ -58,11 +52,10 @@ class AiReadActivity : AppCompatActivity() {
             "uydurma. Okunamayan yeri '(okunamadı)' yaz."
     }
 
-    private lateinit var keyInput: EditText
     private lateinit var askInput: EditText
     private lateinit var result: TextView
     private lateinit var progress: ProgressBar
-    private lateinit var sonnetCheck: CheckBox
+    private lateinit var activeLabel: TextView
     private val actionButtons = ArrayList<Button>()
     private var path: String? = null
 
@@ -84,24 +77,23 @@ class AiReadActivity : AppCompatActivity() {
             setTypeface(typeface, Typeface.BOLD)
         })
 
-        root.addView(TextView(this).apply {
-            text = "Anthropic API anahtarın (console.anthropic.com):"
-            setPadding(0, pad, 0, 4)
-            setTextColor(Color.parseColor("#5A6675"))
+        // Aktif AI + Ayarlar
+        val topRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        activeLabel = TextView(this).apply {
+            textSize = 14f
+            setTextColor(Color.parseColor("#37474F"))
+        }
+        topRow.addView(activeLabel, LinearLayout.LayoutParams(0,
+            LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        topRow.addView(Button(this).apply {
+            text = "⚙ Ayarlar"
+            isAllCaps = false
+            setOnClickListener { startActivity(Intent(this@AiReadActivity, SettingsActivity::class.java)) }
         })
-        keyInput = EditText(this).apply {
-            hint = "sk-ant-..."
-            inputType = InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            setText(prefs().getString(KEY, ""))
-        }
-        root.addView(keyInput)
-
-        sonnetCheck = CheckBox(this).apply {
-            text = "Güçlü model (Sonnet) — zor belgelerde daha isabetli, biraz pahalı"
-            isChecked = prefs().getBoolean(USE_SONNET, false)
-            setOnCheckedChangeListener { _, v -> prefs().edit().putBoolean(USE_SONNET, v).apply() }
-        }
-        root.addView(sonnetCheck)
+        root.addView(topRow, lp().apply { topMargin = (8 * dp).toInt() })
 
         // Hazir presetler
         root.addView(TextView(this).apply {
@@ -109,21 +101,13 @@ class AiReadActivity : AppCompatActivity() {
             setPadding(0, pad, 0, 4)
             setTextColor(Color.parseColor("#5A6675"))
         })
-        root.addView(presetRow(
-            "📄 Oku+Özetle" to P_READ,
-            "🧾 Fatura" to P_FATURA
-        ))
-        root.addView(presetRow(
-            "🏛️ Tapu/İmar" to P_TAPU,
-            "🌍 Çevir" to P_CEVIR
-        ))
+        root.addView(presetRow("📄 Oku+Özetle" to P_READ, "🧾 Fatura" to P_FATURA))
+        root.addView(presetRow("🏛️ Tapu/İmar" to P_TAPU, "🌍 Çevir" to P_CEVIR))
 
         askInput = EditText(this).apply {
             hint = "Kendi sorunu yaz (ör. 'ödenecek tutar ne?')"
         }
-        root.addView(askInput, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = pad })
+        root.addView(askInput, lp().apply { topMargin = pad })
 
         val askBtn = Button(this).apply {
             text = "🤖 SORUYU SOR"
@@ -135,9 +119,7 @@ class AiReadActivity : AppCompatActivity() {
                 else run("$q\nSadece belgedeki bilgiyi kullan, uydurma. Türkçe yanıt ver.")
             }
         }
-        root.addView(askBtn, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = (8 * dp).toInt() })
+        root.addView(askBtn, lp().apply { topMargin = (8 * dp).toInt() })
         actionButtons.add(askBtn)
 
         progress = ProgressBar(this).apply { visibility = View.GONE }
@@ -160,11 +142,16 @@ class AiReadActivity : AppCompatActivity() {
                 cm.setPrimaryClip(android.content.ClipData.newPlainText("ai", result.text))
                 toast("Kopyalandı")
             }
-        }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { topMargin = pad })
+        }, lp().apply { topMargin = pad })
 
         val scroll = ScrollView(this); scroll.addView(root); setContentView(scroll)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activeLabel.text = if (AiConfig.anyKey(this))
+            "Aktif: " + AiConfig.activeLabel(this)
+        else "Aktif: yok — Ayarlar'dan anahtar gir"
     }
 
     private fun presetRow(vararg items: Pair<String, String>): LinearLayout {
@@ -185,22 +172,31 @@ class AiReadActivity : AppCompatActivity() {
         return row
     }
 
-    private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)
+    private fun lp() = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+    )
 
     private fun run(prompt: String) {
-        val key = keyInput.text.toString().trim()
-        if (key.isEmpty()) { toast("Önce API anahtarını gir"); return }
-        prefs().edit().putString(KEY, key).apply()
+        if (!AiConfig.anyKey(this)) {
+            toast("Önce Ayarlar'dan bir AI anahtarı gir")
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return
+        }
         val p = path
         if (p == null || !File(p).exists()) { toast("Belge yok"); return }
-        val model = if (sonnetCheck.isChecked) SONNET else HAIKU
+        val provider = AiConfig.provider(this)
 
         progress.visibility = View.VISIBLE
         setButtons(false)
         result.text = ""
         Thread {
-            val out = try { callClaude(key, model, imageB64(File(p)), prompt) }
-            catch (e: Throwable) { "Hata: " + (e.message ?: e.toString()) }
+            val out = try {
+                val img = imageB64(File(p))
+                if (provider == AiConfig.GEMINI)
+                    callGemini(AiConfig.geminiKey(this), AiConfig.geminiModel(this), img, prompt)
+                else
+                    callClaude(AiConfig.claudeKey(this), AiConfig.claudeModel(this), img, prompt)
+            } catch (e: Throwable) { "Hata: " + (e.message ?: e.toString()) }
             runOnUiThread {
                 progress.visibility = View.GONE
                 setButtons(true)
@@ -214,8 +210,9 @@ class AiReadActivity : AppCompatActivity() {
     private fun imageB64(f: File): String {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(f.absolutePath, bounds)
+        val target = AiConfig.imgMax(this)
         var s = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / s > 1600) s *= 2
+        while (maxOf(bounds.outWidth, bounds.outHeight) / s > target) s *= 2
         val bmp = BitmapFactory.decodeFile(
             f.absolutePath, BitmapFactory.Options().apply { inSampleSize = s }
         )
@@ -225,6 +222,62 @@ class AiReadActivity : AppCompatActivity() {
         return Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
     }
 
+    // ---------------- Gemini ----------------
+    private fun callGemini(key: String, model: String, imgB64: String, prompt: String): String {
+        val first = geminiOnce(key, model, imgB64, prompt)
+        // Model adi bulunamadiysa (404) yedek flash modeliyle tekrar dene
+        if (first.startsWith("Hata (404") && model != AiConfig.GEMINI_FLASH_FALLBACK)
+            return geminiOnce(key, AiConfig.GEMINI_FLASH_FALLBACK, imgB64, prompt)
+        return first
+    }
+
+    private fun geminiOnce(key: String, model: String, imgB64: String, prompt: String): String {
+        val conn = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+            .openConnection() as HttpsURLConnection
+        conn.requestMethod = "POST"
+        conn.setRequestProperty("x-goog-api-key", key)
+        conn.setRequestProperty("content-type", "application/json")
+        conn.doOutput = true
+        conn.connectTimeout = 30000
+        conn.readTimeout = 120000
+
+        val parts = JSONArray()
+        parts.put(JSONObject().apply {
+            put("inline_data", JSONObject().apply {
+                put("mime_type", "image/jpeg"); put("data", imgB64)
+            })
+        })
+        parts.put(JSONObject().apply { put("text", prompt) })
+        val body = JSONObject().apply {
+            put("contents", JSONArray().put(JSONObject().apply {
+                put("parts", parts)
+            }))
+            put("generationConfig", JSONObject().apply { put("maxOutputTokens", 2000) })
+        }
+        conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+
+        val code = conn.responseCode
+        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+        val resp = stream.bufferedReader().use { it.readText() }
+        if (code !in 200..299) {
+            val msg = try { JSONObject(resp).getJSONObject("error").getString("message") }
+            catch (e: Throwable) { resp.take(300) }
+            return "Hata ($code): $msg"
+        }
+        val obj = JSONObject(resp)
+        val cands = obj.optJSONArray("candidates")
+        if (cands == null || cands.length() == 0) {
+            val block = obj.optJSONObject("promptFeedback")?.optString("blockReason")
+            return if (!block.isNullOrEmpty()) "Engellendi: $block" else "(boş yanıt)"
+        }
+        val sb = StringBuilder()
+        val cparts = cands.getJSONObject(0).optJSONObject("content")?.optJSONArray("parts")
+        if (cparts != null) for (i in 0 until cparts.length())
+            sb.append(cparts.getJSONObject(i).optString("text"))
+        return sb.toString().ifBlank { "(boş yanıt)" }
+    }
+
+    // ---------------- Claude ----------------
     private fun callClaude(key: String, model: String, imgB64: String, prompt: String): String {
         val conn = URL("https://api.anthropic.com/v1/messages")
             .openConnection() as HttpsURLConnection
