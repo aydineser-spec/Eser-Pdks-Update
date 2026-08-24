@@ -104,6 +104,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSavePdf.setOnClickListener { savePdfToDownloads() }
         binding.btnShare.setOnClickListener { sharePdf() }
         binding.btnText.setOnClickListener { openTextScreen() }
+        binding.btnAiRead.setOnClickListener { openAiRead() }
 
         binding.modeOriginal.setOnClickListener { applyMode(DocEnhancer.Mode.ORIGINAL) }
         binding.modeColor.setOnClickListener { applyMode(DocEnhancer.Mode.COLOR) }
@@ -674,6 +675,14 @@ class MainActivity : AppCompatActivity() {
         applyMode(DocEnhancer.Mode.COLOR)
     }
 
+    // Claude Haiku ile belgeyi oku/anla (ilk sayfa)
+    private fun openAiRead() {
+        if (pageImages.isEmpty()) return
+        val intent = Intent(this, AiReadActivity::class.java)
+        intent.putExtra(AiReadActivity.EXTRA_PATH, pageImages[0].absolutePath)
+        startActivity(intent)
+    }
+
     private fun openTextScreen() {
         if (pageImages.isEmpty()) return
         val paths = ArrayList(pageImages.map { it.absolutePath })
@@ -704,6 +713,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSavePdf.isEnabled = has
         binding.btnShare.isEnabled = has
         binding.btnText.isEnabled = has
+        binding.btnAiRead.isEnabled = has
         binding.btnCrop.isEnabled = has
         binding.btnMagic.isEnabled = has
         binding.btnDewarp.isEnabled = has

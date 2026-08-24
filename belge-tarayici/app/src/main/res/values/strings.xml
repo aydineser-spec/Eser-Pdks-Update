@@ -42,6 +42,7 @@
     <string name="panel_hide">▽  Araçları Gizle (evrağı büyüt)</string>
     <string name="panel_show">△  Araçları Göster</string>
     <string name="delete_page">✕ Sil</string>
+    <string name="ai_read_btn">🤖  AI ile OKU (Akıllı)</string>
     <string name="magic_btn">✨  SİHİRLİ TARA  (Hepsi Otomatik)</string>
     <string name="magic_busy">Sihirli işlem: kırp → düzleştir → gölge sil…</string>
     <string name="crop_title">Köşeleri belgeye getir</string>
