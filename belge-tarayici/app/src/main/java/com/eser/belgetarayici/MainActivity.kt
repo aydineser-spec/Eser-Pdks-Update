@@ -559,6 +559,7 @@ class MainActivity : AppCompatActivity() {
         setBusy(true, getString(R.string.magic_busy))
         Thread {
             try {
+                var detected: OpenCvProcessor.DocKind? = null
                 for (i in originalImages.indices) {
                     var bmp = decodeSampled(originalImages[i], 1600)
                     // 1) Belgeyi otomatik bul + kırp + eğikliği düzelt
@@ -567,9 +568,19 @@ class MainActivity : AppCompatActivity() {
                     // 2) AI ile kıvrık/buruk düzleştir (UVDoc)
                     val flat = DewarpAI.dewarp(this, bmp)
                     if (flat !== bmp) { bmp.recycle(); bmp = flat }
-                    // 3) AI ile gölge sil + tarayıcı görünümü (DocShadow)
-                    val enh = EnhanceAI.enhance(this, bmp)
-                    if (enh !== bmp) { bmp.recycle(); bmp = enh }
+                    // 3) AKILLI: belge türünü anla, en uygun bitişi uygula
+                    val kind = OpenCvProcessor.classify(bmp)
+                    if (i == 0) detected = kind
+                    val fin = when (kind) {
+                        OpenCvProcessor.DocKind.COLORFUL ->
+                            OpenCvProcessor.process(bmp, DocEnhancer.Mode.COLOR)
+                        OpenCvProcessor.DocKind.LINEART ->
+                            OpenCvProcessor.process(bmp, DocEnhancer.Mode.BW)
+                        OpenCvProcessor.DocKind.GRAY ->
+                            OpenCvProcessor.process(bmp, DocEnhancer.Mode.GRAY)
+                        else -> EnhanceAI.enhance(this, bmp)  // TEXT -> AI gölge sil
+                    }
+                    if (fin !== bmp) { bmp.recycle(); bmp = fin }
                     // Sonucu hem işleme tabanına hem gösterime yaz
                     FileOutputStream(originalImages[i]).use {
                         bmp.compress(Bitmap.CompressFormat.JPEG, 95, it)
@@ -584,6 +595,15 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     renderPreview(); setBusy(false, "")
                     highlightMode(DocEnhancer.Mode.ORIGINAL); updatePageInfo()
+                    detected?.let { k ->
+                        val lbl = when (k) {
+                            OpenCvProcessor.DocKind.COLORFUL -> "Renkli belge → Gölge Temizle"
+                            OpenCvProcessor.DocKind.LINEART -> "Çizim/kroki → Siyah-Beyaz"
+                            OpenCvProcessor.DocKind.GRAY -> "Gri belge → Gri"
+                            else -> "Yazı belgesi → AI İyileştir"
+                        }
+                        toast("🧠 Akıllı: $lbl")
+                    }
                 }
             } catch (e: Throwable) {
                 runOnUiThread { setBusy(false, ""); toast(getString(R.string.processing_failed)) }

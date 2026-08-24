@@ -29,6 +29,40 @@ object OpenCvProcessor {
 
     fun isReady(): Boolean = ready
 
+    // Belge turu (akilli mod secimi icin)
+    enum class DocKind { COLORFUL, TEXT, LINEART, GRAY }
+
+    // Renk + murekkep oranindan belge turunu tahmin et (offline, hizli)
+    fun classify(src: Bitmap): DocKind {
+        if (!ensureInit()) return DocKind.TEXT
+        return try {
+            val rgba = Mat(); Utils.bitmapToMat(src, rgba)
+            val rgb = Mat(); Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)
+            val longEdge = max(rgb.width(), rgb.height())
+            val sc = if (longEdge > 700) 700.0 / longEdge else 1.0
+            val small = Mat()
+            if (sc < 1.0) Imgproc.resize(rgb, small, Size(rgb.width() * sc, rgb.height() * sc))
+            else rgb.copyTo(small)
+            // renklilik: HSV doygunluk ortalamasi
+            val hsv = Mat(); Imgproc.cvtColor(small, hsv, Imgproc.COLOR_RGB2HSV)
+            val chans = ArrayList<Mat>(); Core.split(hsv, chans)
+            val satMean = Core.mean(chans[1]).`val`[0]
+            // murekkep orani (koyu piksel yuzdesi)
+            val gray = Mat(); Imgproc.cvtColor(small, gray, Imgproc.COLOR_RGB2GRAY)
+            val bin = Mat()
+            Imgproc.threshold(gray, bin, 110.0, 255.0, Imgproc.THRESH_BINARY_INV)
+            val darkRatio = Core.countNonZero(bin).toDouble() / (bin.rows() * bin.cols()).toDouble()
+            when {
+                satMean > 45.0 -> DocKind.COLORFUL      // renkli belge/foto
+                darkRatio < 0.035 -> DocKind.LINEART    // cizim/kroki (seyrek cizgi)
+                darkRatio <= 0.45 -> DocKind.TEXT       // yazi belgesi
+                else -> DocKind.GRAY
+            }
+        } catch (e: Throwable) {
+            DocKind.TEXT
+        }
+    }
+
     fun ensureInit(): Boolean {
         if (!ready) {
             ready = try { OpenCVLoader.initLocal() } catch (e: Throwable) { false }
