@@ -32,7 +32,8 @@ object OpenCvProcessor {
     // Belge turu (akilli mod secimi icin)
     enum class DocKind { COLORFUL, TEXT, LINEART, GRAY }
 
-    // Renk + murekkep oranindan belge turunu tahmin et (offline, hizli)
+    // Belge turunu tahmin et (offline). Doygunluk SADECE icerik pikselinde olculur
+    // -> renkli/soluk kase asla "cizim" sanilip Siyah-Beyaz'a gonderilmez (silinmez).
     fun classify(src: Bitmap): DocKind {
         if (!ensureInit()) return DocKind.TEXT
         return try {
@@ -43,20 +44,21 @@ object OpenCvProcessor {
             val small = Mat()
             if (sc < 1.0) Imgproc.resize(rgb, small, Size(rgb.width() * sc, rgb.height() * sc))
             else rgb.copyTo(small)
-            // renklilik: HSV doygunluk ortalamasi
             val hsv = Mat(); Imgproc.cvtColor(small, hsv, Imgproc.COLOR_RGB2HSV)
-            val chans = ArrayList<Mat>(); Core.split(hsv, chans)
-            val satMean = Core.mean(chans[1]).`val`[0]
-            // murekkep orani (koyu piksel yuzdesi)
+            val chans = ArrayList<Mat>(); Core.split(hsv, chans) // H, S, V
             val gray = Mat(); Imgproc.cvtColor(small, gray, Imgproc.COLOR_RGB2GRAY)
-            val bin = Mat()
-            Imgproc.threshold(gray, bin, 110.0, 255.0, Imgproc.THRESH_BINARY_INV)
-            val darkRatio = Core.countNonZero(bin).toDouble() / (bin.rows() * bin.cols()).toDouble()
+            // Icerik maskesi: beyaz olmayan (murekkep/nesne/kase)
+            val content = Mat()
+            Imgproc.threshold(gray, content, 235.0, 255.0, Imgproc.THRESH_BINARY_INV)
+            val total = (content.rows() * content.cols()).toDouble()
+            val contentRatio = Core.countNonZero(content).toDouble() / total
+            if (contentRatio < 0.004) return DocKind.TEXT
+            val satContent = Core.mean(chans[1], content).`val`[0]  // icerigin doygunlugu
+            val meanDark = Core.mean(gray, content).`val`[0]        // icerigin koyulugu
             when {
-                satMean > 45.0 -> DocKind.COLORFUL      // renkli belge/foto
-                darkRatio < 0.035 -> DocKind.LINEART    // cizim/kroki (seyrek cizgi)
-                darkRatio <= 0.45 -> DocKind.TEXT       // yazi belgesi
-                else -> DocKind.GRAY
+                satContent > 35.0 -> DocKind.COLORFUL                       // renkli/kase -> renk korunur
+                contentRatio < 0.05 && meanDark < 100.0 -> DocKind.LINEART  // koyu seyrek cizim -> S/B
+                else -> DocKind.TEXT                                        // yazi -> AI iyilestir
             }
         } catch (e: Throwable) {
             DocKind.TEXT
