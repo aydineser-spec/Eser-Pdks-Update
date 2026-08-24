@@ -223,10 +223,39 @@ object OpenCvProcessor {
         val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 2.0)
         Core.addWeighted(rgb, 1.3, blur, -0.3, 0.0, rgb)
 
+        // Arka plani bembeyaz temizle (grenli/benekli gri gider, yazi+renk korunur)
+        whitenPaper(rgb)
+
         val outRgba = Mat(); Imgproc.cvtColor(rgb, outRgba, Imgproc.COLOR_RGB2RGBA)
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(outRgba, out)
         return out
+    }
+
+    /**
+     * Kagit arka planini tertemiz beyaza ceker (tarayici gorunumu).
+     * Yerel esikleme (adaptive threshold) ile "yazi mi kagit mi" ayrilir:
+     *  - Cevresine gore ACIK olan (kagit) pikseller beyazlatilir -> benek/gren gider
+     *  - Cevresine gore KOYU olan (yazi/cizgi) DOKUNULMAZ
+     *  - Doygunlugu yuksek (mavi kase, renkli imza) icerik KORUNUR
+     * rgb: RGB, 8UC3 (yerinde degistirilir).
+     */
+    fun whitenPaper(rgb: Mat) {
+        val gray = Mat(); Imgproc.cvtColor(rgb, gray, Imgproc.COLOR_RGB2GRAY)
+        // Hafif medyan: tekil benekleri kaldir (ince cizgiyi bozmaz)
+        Imgproc.medianBlur(gray, gray, 3)
+        // Yerel esik: kagit=255, yazi=0 (buyuk blok -> golge/gren yaniltmaz)
+        val bgMask = Mat()
+        Imgproc.adaptiveThreshold(
+            gray, bgMask, 255.0,
+            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 31, 15.0
+        )
+        // Renkli icerigi koru: sadece dusuk doygunluk (notr gri) beyazlatilir
+        val hsv = Mat(); Imgproc.cvtColor(rgb, hsv, Imgproc.COLOR_RGB2HSV)
+        val ch = ArrayList<Mat>(); Core.split(hsv, ch)
+        val lowSat = Mat(); Imgproc.threshold(ch[1], lowSat, 45.0, 255.0, Imgproc.THRESH_BINARY_INV)
+        val paper = Mat(); Core.bitwise_and(bgMask, lowSat, paper)
+        rgb.setTo(Scalar(255.0, 255.0, 255.0), paper)
     }
 
     private fun grayMode(src: Bitmap): Bitmap {

@@ -84,15 +84,9 @@ object EnhanceAI {
             val outSmall = Mat(rh, rw, CvType.CV_8UC3); outSmall.put(0, 0, outPix)
             val outFull = Mat(); Imgproc.resize(outSmall, outFull, Size(imgW.toDouble(), imgH.toDouble()))
 
-            // Gren temizle; SADECE gercek kagit (parlak + doygunlugu dusuk) beyazlatilir.
-            // Renkli/soluk icerik (mavi kase, imza, renkli yazi) ASLA silinmez.
-            Imgproc.medianBlur(outFull, outFull, 3)
-            val hsvE = Mat(); Imgproc.cvtColor(outFull, hsvE, Imgproc.COLOR_RGB2HSV)
-            val chE = ArrayList<Mat>(); Core.split(hsvE, chE) // H, S, V
-            val bright = Mat(); Imgproc.threshold(chE[2], bright, 236.0, 255.0, Imgproc.THRESH_BINARY)
-            val lowSat = Mat(); Imgproc.threshold(chE[1], lowSat, 30.0, 255.0, Imgproc.THRESH_BINARY_INV)
-            val paper = Mat(); Core.bitwise_and(bright, lowSat, paper)
-            outFull.setTo(Scalar(255.0, 255.0, 255.0), paper)
+            // Arka plani tertemiz beyaza cek (yerel esikleme): grenli/benekli gri gider,
+            // yazi ve renkli icerik (mavi kase, imza) KORUNUR.
+            OpenCvProcessor.whitenPaper(outFull)
 
             val outRgba = Mat(); Imgproc.cvtColor(outFull, outRgba, Imgproc.COLOR_RGB2RGBA)
             val out = Bitmap.createBitmap(imgW, imgH, Bitmap.Config.ARGB_8888)
