@@ -1,0 +1,94 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.eser.belgetarayici"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.eser.belgetarayici"
+        minSdk = 24
+        targetSdk = 34
+        // Her CI derlemesinde artan surum no -> Android "guncelleme" olarak gorur
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+
+        // OpenCV native kutuphaneleri: yaygin telefon mimarileri (boyut icin)
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+    }
+
+    // Sabit imza anahtari: her derleme AYNI imzayla -> silmeden ustune guncellenir
+    signingConfigs {
+        create("eser") {
+            storeFile = file("eserlens.jks")
+            storePassword = "eserlens"
+            keyAlias = "eserlens"
+            keyPassword = "eserlens"
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("eser")
+        }
+        release {
+            signingConfig = signingConfigs.getByName("eser")
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
+
+    // OpenCV ve ML Kit ayni native kutuphaneyi (libc++_shared.so) getirebilir;
+    // cakismayi onle
+    packaging {
+        jniLibs {
+            pickFirsts += "**/libc++_shared.so"
+        }
+    }
+
+    // ONNX modeli sikistirilmasin (dogrudan okunabilsin)
+    androidResources {
+        noCompress += "onnx"
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.activity:activity-ktx:1.9.1")
+    // Google ML Kit Belge Tarayici motoru: otomatik kenar bulma, perspektif
+    // duzeltme, golge/leke temizleme, yazi netlestirme + JPEG & PDF ciktisi.
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+    // Resimden yazi cikarma (OCR).
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    // Metnin dilini otomatik tanima.
+    implementation("com.google.mlkit:language-id:17.0.6")
+    // Cihazda (cevrimdisi) ceviri - 50+ dil.
+    implementation("com.google.mlkit:translate:17.0.3")
+    // OpenCV: otomatik kenar tespiti, perspektif duzeltme, CLAHE,
+    // adaptive threshold (Adobe Scan / MS Lens seviyesi isleme).
+    implementation("org.opencv:opencv:4.11.0")
+    // ONNX Runtime: UVDoc AI dewarp modelini cihazda calistirir (buruk/kivrik duzeltme)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.23.0")
+}

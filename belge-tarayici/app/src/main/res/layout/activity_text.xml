@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/primary"
+        app:navigationIcon="@android:drawable/ic_menu_close_clear_cancel"
+        app:title="@string/text_title"
+        app:titleTextColor="@android:color/white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ProgressBar
+                    android:id="@+id/progress"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="10dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/recognized_label"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <EditText
+                android:id="@+id/txtRecognized"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="140dp"
+                android:layout_marginTop="6dp"
+                android:background="@android:drawable/editbox_background"
+                android:padding="12dp"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:hint="@string/recognized_hint" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopyText"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/copy_text"
+                app:cornerRadius="12dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="#E0E0E0" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/translate_to"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical">
+
+                <Spinner
+                    android:id="@+id/spinnerLang"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTranslate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/translate"
+                    app:backgroundTint="@color/accent"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/txtTranslation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="140dp"
+                android:layout_marginTop="10dp"
+                android:background="@android:drawable/editbox_background"
+                android:padding="12dp"
+                android:gravity="top|start"
+                android:inputType="textMultiLine"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:hint="@string/translation_hint" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopyTranslation"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/copy_translation"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
