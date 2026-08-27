@@ -182,12 +182,15 @@ object OpenCvProcessor {
 
         // TEK luminans arka plani ile bol (renk oranlari korunur -> mor/pembe
         // kayma OLMAZ). Per-kanal bolme renk lekesi yapiyordu.
+        // Foto grenini once yumusat (benekleşmeyi engeller)
+        Imgproc.medianBlur(rgb, rgb, 3)
+
         val chans = ArrayList<Mat>(); Core.split(rgb, chans)
-        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(41.0, 41.0))
+        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(51.0, 51.0))
         val lum = Mat(); Imgproc.cvtColor(rgb, lum, Imgproc.COLOR_RGB2GRAY)
         val bg = Mat()
         Imgproc.morphologyEx(lum, bg, Imgproc.MORPH_CLOSE, kernel)
-        Imgproc.GaussianBlur(bg, bg, Size(0.0, 0.0), 21.0)
+        Imgproc.GaussianBlur(bg, bg, Size(0.0, 0.0), 25.0)
         val bgF = Mat(); bg.convertTo(bgF, CvType.CV_32F)
         Core.add(bgF, Scalar(1.0), bgF)
         for (i in 0 until 3) {
@@ -215,16 +218,13 @@ object OpenCvProcessor {
             )
         }
 
-        // Kontrast/koyuluk: yaziyi siyahlastir, kagidi beyazlat, kalan golge bandini al
-        // (out = 1.4*in - 45) -> "soluk/silik" gorunum biter
-        rgb.convertTo(rgb, -1, 1.4, -45.0)
-
-        // Keskinlik (hafif - yazi 'dolma kalem' gibi kalinlasmasin)
-        val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 2.0)
-        Core.addWeighted(rgb, 1.3, blur, -0.3, 0.0, rgb)
-
-        // Arka plani bembeyaz temizle (grenli/benekli gri gider, yazi+renk korunur)
+        // Arka plani bembeyaz temizle + kontrast (puruzsuz seviye ayari, benek yok)
+        // Kagit -> beyaz, yazi -> siyah, kase/imza rengi korunur
         whitenPaper(rgb)
+
+        // Hafif keskinlik (yazi 'dolma kalem' gibi kalinlasmasin - dusuk tutuldu)
+        val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 1.5)
+        Core.addWeighted(rgb, 1.2, blur, -0.2, 0.0, rgb)
 
         val outRgba = Mat(); Imgproc.cvtColor(rgb, outRgba, Imgproc.COLOR_RGB2RGBA)
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
@@ -233,29 +233,36 @@ object OpenCvProcessor {
     }
 
     /**
-     * Kagit arka planini tertemiz beyaza ceker (tarayici gorunumu).
-     * Yerel esikleme (adaptive threshold) ile "yazi mi kagit mi" ayrilir:
-     *  - Cevresine gore ACIK olan (kagit) pikseller beyazlatilir -> benek/gren gider
-     *  - Cevresine gore KOYU olan (yazi/cizgi) DOKUNULMAZ
-     *  - Doygunlugu yuksek (mavi kase, renkli imza) icerik KORUNUR
+     * Kagit arka planini tertemiz beyaza ceker (vFlat/CamScanner gorunumu).
+     * BENEK YAPMAZ: yerel esikleme yerine PURUZSUZ global seviye ayari kullanir.
+     *  - medianBlur: foto grenini yumusatir (ince cizgiyi bozmaz)
+     *  - seviye (levels): siyah nokta 70, beyaz nokta 205 -> kagit bembeyaz, yazi siyah,
+     *    tek bir affine + kirpma oldugu icin karabiber benek OLUSMAZ
+     *  - renkli icerik (mavi kase, imza): orijinal renginde geri konur (bozulmaz)
      * rgb: RGB, 8UC3 (yerinde degistirilir).
      */
     fun whitenPaper(rgb: Mat) {
-        val gray = Mat(); Imgproc.cvtColor(rgb, gray, Imgproc.COLOR_RGB2GRAY)
-        // Hafif medyan: tekil benekleri kaldir (ince cizgiyi bozmaz)
-        Imgproc.medianBlur(gray, gray, 3)
-        // Yerel esik: kagit=255, yazi=0 (buyuk blok -> golge/gren yaniltmaz)
-        val bgMask = Mat()
-        Imgproc.adaptiveThreshold(
-            gray, bgMask, 255.0,
-            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 31, 15.0
-        )
-        // Renkli icerigi koru: sadece dusuk doygunluk (notr gri) beyazlatilir
-        val hsv = Mat(); Imgproc.cvtColor(rgb, hsv, Imgproc.COLOR_RGB2HSV)
+        // Renkli icerigi sonradan geri koymak icin orijinali sakla
+        val orig = rgb.clone()
+
+        // Foto grenini yumusat (benekleri kaynaginda azaltir)
+        Imgproc.medianBlur(rgb, rgb, 3)
+
+        // Seviye ayari: out = (in - bp) * 255/(wp - bp)  (bp=70, wp=205)
+        // Kagit (~235) -> 255 beyaz, yazi (~80) -> ~0 siyah; PURUZSUZ, benek yok
+        val bp = 70.0; val wp = 205.0
+        val scale = 255.0 / (wp - bp)
+        rgb.convertTo(rgb, -1, scale, -bp * scale)
+
+        // Renkli (doygun) icerigi orijinalden geri koy: kase/imza rengi birebir kalir
+        val hsv = Mat(); Imgproc.cvtColor(orig, hsv, Imgproc.COLOR_RGB2HSV)
         val ch = ArrayList<Mat>(); Core.split(hsv, ch)
-        val lowSat = Mat(); Imgproc.threshold(ch[1], lowSat, 45.0, 255.0, Imgproc.THRESH_BINARY_INV)
-        val paper = Mat(); Core.bitwise_and(bgMask, lowSat, paper)
-        rgb.setTo(Scalar(255.0, 255.0, 255.0), paper)
+        val satMask = Mat(); Imgproc.threshold(ch[1], satMask, 45.0, 255.0, Imgproc.THRESH_BINARY)
+        // Maskeyi biraz genislet: renkli kenarlar da korunsun
+        val k = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
+        Imgproc.dilate(satMask, satMask, k)
+        orig.copyTo(rgb, satMask)
+        orig.release()
     }
 
     private fun grayMode(src: Bitmap): Bitmap {
