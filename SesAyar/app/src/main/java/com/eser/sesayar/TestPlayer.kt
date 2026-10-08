@@ -103,6 +103,8 @@ class TestPlayer(private val context: Context) {
         fx?.apply(p)
     }
 
+    fun report(): String = fx?.report() ?: "Test çalar: efekt yok"
+
     fun stop() {
         running = false
         track?.let { t ->

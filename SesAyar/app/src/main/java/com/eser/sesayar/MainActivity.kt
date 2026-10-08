@@ -34,6 +34,7 @@ class MainActivity : Activity() {
     private lateinit var presetSpinner: Spinner
     private lateinit var toneButton: Button
     private lateinit var playerText: TextView
+    private lateinit var diagText: TextView
     private lateinit var player: TestPlayer
 
     private var editing = Settings.PROFILE_MINOR
@@ -213,6 +214,10 @@ class MainActivity : Activity() {
         root.addView(stopButton)
         root.addView(playerText)
 
+        root.addView(heading("Tanı (sorun olursa bunun ekran görüntüsünü gönder)"))
+        diagText = text("", 11f)
+        root.addView(diagText)
+
         root.addView(heading("Bilmen gerekenler"))
         root.addView(
             text(
@@ -278,6 +283,12 @@ class MainActivity : Activity() {
     }
 
     private fun updateStatus() {
+        val globalDiag = if (EffectState.running) {
+            "GENEL EFEKT:\n" + EffectState.globalReport
+        } else {
+            "GENEL EFEKT: servis kapalı"
+        }
+        diagText.text = "TEST ÇALAR:\n" + player.report() + "\n\n" + globalDiag
         statusText.text = if (!EffectState.running) {
             "Durum: kapalı"
         } else {

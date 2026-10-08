@@ -7,4 +7,5 @@ object EffectState {
     @Volatile var deviceName = ""
     @Volatile var sessionCount = 0
     @Volatile var globalOk = false
+    @Volatile var globalReport = ""
 }

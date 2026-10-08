@@ -72,6 +72,7 @@ class EffectService : Service() {
         if (g.create()) {
             global = g
         } else {
+            EffectState.globalReport = g.report()
             g.release()
         }
         EffectState.globalOk = global != null
@@ -129,6 +130,7 @@ class EffectService : Service() {
         val p = Settings.profile(this, profileKey)
         global?.apply(p)
         sessions.values.forEach { it.apply(p) }
+        global?.let { EffectState.globalReport = it.report() }
 
         EffectState.activeProfile = profileKey
         EffectState.deviceName = deviceName
