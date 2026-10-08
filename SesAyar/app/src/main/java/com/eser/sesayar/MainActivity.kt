@@ -2,6 +2,7 @@ package com.eser.sesayar
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -30,6 +32,9 @@ class MainActivity : Activity() {
     private lateinit var trebleBar: SeekBar
     private lateinit var boostBar: SeekBar
     private lateinit var presetSpinner: Spinner
+    private lateinit var toneButton: Button
+    private lateinit var playerText: TextView
+    private lateinit var player: TestPlayer
 
     private var editing = Settings.PROFILE_MINOR
     private var loading = false
@@ -43,6 +48,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        player = TestPlayer(this)
         buildUi()
         loadProfile()
         requestPermissionsIfNeeded()
@@ -59,6 +65,21 @@ class MainActivity : Activity() {
     override fun onPause() {
         handler.removeCallbacks(statusTick)
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        player.stop()
+        super.onDestroy()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val uri = data?.data
+        if (requestCode == REQ_PICK_AUDIO && resultCode == RESULT_OK && uri != null) {
+            player.playUri(uri, currentProfile()) { msg -> playerText.text = msg }
+            toneButton.text = "Test sesini çal"
+            updatePlayerText()
+        }
     }
 
     private fun buildUi() {
@@ -145,6 +166,53 @@ class MainActivity : Activity() {
         root.addView(trebleLabel); root.addView(trebleBar)
         root.addView(boostLabel); root.addView(boostBar)
 
+        root.addView(heading("Test çalar"))
+        root.addView(
+            text(
+                "Efektin çalışıp çalışmadığını burada dene. Bu çalar efekti doğrudan kendi sesine bağlar. " +
+                    "Çalarken kaydırıcıları oynat. Önce düşük sesle başla.",
+                13f
+            )
+        )
+        toneButton = Button(this).apply {
+            text = "Test sesini çal"
+            setOnClickListener {
+                if (player.isPlaying) {
+                    player.stop()
+                    text = "Test sesini çal"
+                } else {
+                    player.playTone(currentProfile())
+                    text = "Durdur"
+                }
+                updatePlayerText()
+            }
+        }
+        val fileButton = Button(this).apply {
+            text = "Müzik dosyası seç ve çal"
+            setOnClickListener {
+                toneButton.text = "Test sesini çal"
+                player.stop()
+                val pick = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    type = "audio/*"
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                }
+                startActivityForResult(pick, REQ_PICK_AUDIO)
+            }
+        }
+        val stopButton = Button(this).apply {
+            text = "Çaları durdur"
+            setOnClickListener {
+                player.stop()
+                toneButton.text = "Test sesini çal"
+                updatePlayerText()
+            }
+        }
+        playerText = text("", 13f)
+        root.addView(toneButton)
+        root.addView(fileButton)
+        root.addView(stopButton)
+        root.addView(playerText)
+
         root.addView(heading("Bilmen gerekenler"))
         root.addView(
             text(
@@ -178,11 +246,24 @@ class MainActivity : Activity() {
         boostBar.progress = p.boostDb
         presetSpinner.setSelection(0)
         updateLabels()
+        player.apply(p)
         loading = false
     }
 
+    private fun currentProfile() = Profile(bassBar.progress, trebleBar.progress, boostBar.progress)
+
     private fun saveFromBars() {
-        Settings.saveProfile(this, editing, Profile(bassBar.progress, trebleBar.progress, boostBar.progress))
+        val p = currentProfile()
+        Settings.saveProfile(this, editing, p)
+        player.apply(p)
+    }
+
+    private fun updatePlayerText() {
+        playerText.text = when {
+            !player.isPlaying -> ""
+            player.effectOk -> "Çalıyor. Bas, tiz ve ses kaydırıcılarını oynat, ses değişmeli."
+            else -> "Çalıyor ama bu telefonda efekt oluşturulamadı."
+        }
     }
 
     private fun updateLabels() {
@@ -233,4 +314,8 @@ class MainActivity : Activity() {
     private fun heading(t: String) = text(t, 15f, bold = true).also { it.setPadding(0, dp(20), 0, dp(4)) }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+
+    companion object {
+        private const val REQ_PICK_AUDIO = 2
+    }
 }

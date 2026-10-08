@@ -15,6 +15,17 @@ uygulamasındaki ayarlara dokunmaz; telefonun ses efekt katmanında çalışır.
 3. Uygulamayı aç, **Ses Ayar çalışsın**'ı aç, bildirim ve Bluetooth izinlerini ver.
 4. Müzik uygulamasını başlat (ya da durdurup tekrar oynat).
 
+## Test çalar
+
+Uygulamanın içinde "Test çalar" bölümü var: bas / orta / tiz test sesi ya da kendi müzik dosyanı çalar.
+Efekt doğrudan bu çaların sesine bağlandığı için telefon markasına bağlı değildir. Efektin çalışıp
+çalışmadığını burada duyabilirsin.
+
+## Güncelleme
+
+APK artık sabit imzayla derleniyor; yeni sürümler eskisinin üzerine kurulur.
+(v1.0'dan v1.1'e geçerken bir kereliğine eski Ses Ayar'ı silmen gerekir.)
+
 ## Sınırlar
 
 - Efekt, ses oturumunu bildiren çalarlarda (Spotify, YouTube Music, Samsung Music…) işler.
