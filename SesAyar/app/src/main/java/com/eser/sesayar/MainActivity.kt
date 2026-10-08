@@ -51,6 +51,10 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         player = TestPlayer(this)
         buildUi()
+        player.onStopped = {
+            toneButton.text = "Test sesini çal"
+            updatePlayerText()
+        }
         loadProfile()
         requestPermissionsIfNeeded()
         if (Settings.enabled(this) && !EffectState.running) {
@@ -167,11 +171,11 @@ class MainActivity : Activity() {
         root.addView(trebleLabel); root.addView(trebleBar)
         root.addView(boostLabel); root.addView(boostBar)
 
-        root.addView(heading("Test çalar"))
+        root.addView(heading("Ses Ayar çalar (yazılımsal bas / tiz / ses artırma)"))
         root.addView(
             text(
-                "Efektin çalışıp çalışmadığını burada dene. Bu çalar efekti doğrudan kendi sesine bağlar. " +
-                    "Çalarken kaydırıcıları oynat. Önce düşük sesle başla.",
+                "Bu çalar sesi kendisi işler, telefonun ses efektlerine bağlı değildir. Kulaklıkta da çalışır. " +
+                    "Bir müzik dosyası seç ve çalarken kaydırıcıları oynat. Önce düşük sesle başla.",
                 13f
             )
         )
@@ -266,8 +270,7 @@ class MainActivity : Activity() {
     private fun updatePlayerText() {
         playerText.text = when {
             !player.isPlaying -> ""
-            player.effectOk -> "Çalıyor. Bas, tiz ve ses kaydırıcılarını oynat, ses değişmeli."
-            else -> "Çalıyor ama bu telefonda efekt oluşturulamadı."
+            else -> "Çalıyor. Bas, tiz ve ses kaydırıcılarını oynat, ses hemen değişmeli."
         }
     }
 
@@ -288,7 +291,7 @@ class MainActivity : Activity() {
         } else {
             "GENEL EFEKT: servis kapalı"
         }
-        diagText.text = "TEST ÇALAR:\n" + player.report() + "\n\n" + globalDiag
+        diagText.text = "YAZILIM ÇALAR:\n" + player.report() + "\n\n" + globalDiag
         statusText.text = if (!EffectState.running) {
             "Durum: kapalı"
         } else {

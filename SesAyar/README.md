@@ -15,11 +15,11 @@ uygulamasındaki ayarlara dokunmaz; telefonun ses efekt katmanında çalışır.
 3. Uygulamayı aç, **Ses Ayar çalışsın**'ı aç, bildirim ve Bluetooth izinlerini ver.
 4. Müzik uygulamasını başlat (ya da durdurup tekrar oynat).
 
-## Test çalar
+## Ses Ayar çalar (yazılımsal)
 
-Uygulamanın içinde "Test çalar" bölümü var: bas / orta / tiz test sesi ya da kendi müzik dosyanı çalar.
-Efekt doğrudan bu çaların sesine bağlandığı için telefon markasına bağlı değildir. Efektin çalışıp
-çalışmadığını burada duyabilirsin.
+Uygulamanın içindeki çalar, bir müzik dosyasını kendisi çözer ve bas / tiz / ses kazancını sayısal olarak
+(raf süzgeçleri + yumuşak sınırlayıcı) uygular. Telefonun ses efekt sistemine ve Samsung'un engellerine bağlı
+değildir, Bluetooth'ta da aynı çalışır. Yalnızca bu çalarda çalan seslere etki eder.
 
 ## Güncelleme
 

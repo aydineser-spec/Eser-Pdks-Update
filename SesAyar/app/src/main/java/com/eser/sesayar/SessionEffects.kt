@@ -118,7 +118,7 @@ class SessionEffects(val sessionId: Int) {
     }
 
     companion object {
-        const val MAX_EQ_DB = 10f
+        const val MAX_EQ_DB = 12f
         const val MAX_BOOST_DB = 10
     }
 }
