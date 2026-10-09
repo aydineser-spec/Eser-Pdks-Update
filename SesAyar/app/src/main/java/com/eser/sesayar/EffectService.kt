@@ -138,15 +138,34 @@ class EffectService : Service() {
         updateNotification()
     }
 
-    /** Bagli cikis cihazlari arasinda adinda "minor" gecen Bluetooth cihazinin adini dondurur. */
+    /**
+     * Bagli cikis cihazlari arasinda adinda "minor" veya "marshall" gecen Bluetooth cihazinin adini dondurur.
+     * (Marshall uygulamasi kulakligi "Marshall <ad>" adiyla ikinci bir kayit olarak da ekleyebiliyor.)
+     */
     private fun findMinorDevice(): String? {
         val outs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        val btNames = ArrayList<String>()
+        var found: String? = null
         for (d in outs) {
             if (!isBluetooth(d.type)) continue
             val name = d.productName?.toString() ?: continue
-            if (name.contains("minor", ignoreCase = true)) return name
+            btNames.add("$name (${typeName(d.type)})")
+            if (found == null && (name.contains("minor", ignoreCase = true) ||
+                    name.contains("marshall", ignoreCase = true))
+            ) {
+                found = name
+            }
         }
-        return null
+        EffectState.btOutputs = if (btNames.isEmpty()) "yok" else btNames.joinToString(", ")
+        return found
+    }
+
+    private fun typeName(type: Int): String = when {
+        type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "müzik/A2DP"
+        type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "arama/SCO"
+        Build.VERSION.SDK_INT >= 31 && type == AudioDeviceInfo.TYPE_BLE_HEADSET -> "BLE kulaklık"
+        Build.VERSION.SDK_INT >= 31 && type == AudioDeviceInfo.TYPE_BLE_SPEAKER -> "BLE hoparlör"
+        else -> "tür $type"
     }
 
     private fun isBluetooth(type: Int): Boolean {

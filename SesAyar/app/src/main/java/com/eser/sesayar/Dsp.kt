@@ -112,11 +112,11 @@ class Dsp(private val sampleRate: Int, private val channels: Int) {
         }
     }
 
-    /** Sert kirpilma (cizirti) yerine yumusak sinirlayici: esik ustu tanh ile bastirilir. */
+    /** Sert kirpilma (cizirti) yerine yumusak sinirlayici: esik ustu tanh ile CEILING degerine yaklastirilir. */
     private fun softLimit(x: Float): Float {
         val ax = abs(x)
         if (ax <= KNEE) return x
-        return sign(x) * (KNEE + (1f - KNEE) * tanh((ax - KNEE) / (1f - KNEE)))
+        return sign(x) * (KNEE + (CEILING - KNEE) * tanh((ax - KNEE) / (CEILING - KNEE)))
     }
 
     companion object {
@@ -125,5 +125,8 @@ class Dsp(private val sampleRate: Int, private val channels: Int) {
         const val LOW_FREQ = 150f
         const val HIGH_FREQ = 4000f
         private const val KNEE = 0.6f
+
+        /** Cikis tavani yaklasik -1 dBFS: Bluetooth kodeklemesi (SBC/AAC) icin pay birakir. */
+        private const val CEILING = 0.89f
     }
 }

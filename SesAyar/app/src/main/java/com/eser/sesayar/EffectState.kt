@@ -8,4 +8,5 @@ object EffectState {
     @Volatile var sessionCount = 0
     @Volatile var globalOk = false
     @Volatile var globalReport = ""
+    @Volatile var btOutputs = "yok"
 }

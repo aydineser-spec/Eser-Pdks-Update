@@ -15,7 +15,7 @@ object Settings {
     const val PREFS = "sesayar"
 
     private val defaults = mapOf(
-        PROFILE_MINOR to Profile(bass = 85, treble = 62, boostDb = 4),
+        PROFILE_MINOR to Profile(bass = 60, treble = 55, boostDb = 0),
         PROFILE_OTHER to Profile(bass = 50, treble = 50, boostDb = 0),
     )
 
@@ -23,7 +23,7 @@ object Settings {
         "Düz (efekt yok)" to Profile(50, 50, 0),
         "Dengeli ve net" to Profile(60, 65, 2),
         "Bas ağırlıklı" to Profile(100, 45, 3),
-        "Minor IV için önerilen" to Profile(85, 62, 4),
+        "Minor IV için önerilen" to Profile(62, 56, 1),
         "Vokal / konuşma" to Profile(35, 75, 4),
     )
 

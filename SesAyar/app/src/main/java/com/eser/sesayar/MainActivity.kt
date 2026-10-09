@@ -298,7 +298,8 @@ class MainActivity : Activity() {
             val prof = if (EffectState.activeProfile == Settings.PROFILE_MINOR) "Minor IV" else "Diğer cihaz"
             val dev = if (EffectState.deviceName.isNotEmpty()) " (${EffectState.deviceName})" else ""
             val global = if (EffectState.globalOk) "açık" else "bu telefonda desteklenmiyor"
-            "Durum: çalışıyor\nAktif profil: $prof$dev\nBağlanan müzik uygulaması: ${EffectState.sessionCount}\nGenel efekt: $global"
+            "Durum: çalışıyor\nAktif profil: $prof$dev\nBluetooth çıkışları: ${EffectState.btOutputs}\n" +
+                "Bağlanan müzik uygulaması: ${EffectState.sessionCount}\nGenel efekt: $global"
         }
     }
 
