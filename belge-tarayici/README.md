@@ -1,12 +1,14 @@
 # Eser Lens (Android belge tarayıcı)
 
-vFlat tarzı sade belge tarayıcı. Yapay zekâ yok; her işlem öngörülebilir
-ve sayfayı bozmaz.
+vFlat tarzı sade belge tarayıcı. Yapay zekâ, OpenCV ya da uygulamanın kendi
+filtresi yok. Görüntü temizliğini yalnızca Google'ın belge tarayıcısı
+(Google ML Kit, tam mod) yapar; uygulama sayfanın rengine ve tonuna dokunmaz.
 
 ## Nasıl kullanılır
 
 1. **Uygulamayı aç:** Kamera kendiliğinden açılır. Belgeyi çerçeveye al;
    kenarları bulunca kendisi çeker. İstersen deklanşöre kendin de basabilirsin.
+   Çektikten sonraki ekranda görüntüyü temizleyebilir, renk ayarını seçebilirsin.
    Galerideki bir fotoğraf için kamera ekranındaki resim simgesine bas.
 2. **Sayfaları kontrol et:** Her sayfanın altında kendi düğmeleri var:
    - **Kırp:** Yeşil köşeleri belgenin köşelerine sürükle.
@@ -14,9 +16,7 @@ ve sayfayı bozmaz.
    - **İkiye Böl:** Yalnızca geniş (iki sayfalık kitap) çekimlerde görünür.
      Sayfayı ortadaki cilt çizgisinden ikiye ayırır.
    - **Sil:** Sormadan silmez.
-3. **Görünüm seç (alt sıra):** Orijinal / Net Belge / Siyah-Beyaz.
-   Varsayılan: **Net Belge**. Kâğıt beyazlar, gölge gider, silik yazı korunur.
-4. **Kaydet:**
+3. **Kaydet (alt sıra):**
    - **+ Sayfa:** Sona yeni sayfa ekler.
    - **PDF Kaydet:** İndirilenler › EserLens klasörüne kaydeder.
    - **Paylaş:** WhatsApp, e-posta vb. ile gönderir.

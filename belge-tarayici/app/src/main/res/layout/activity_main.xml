@@ -3,7 +3,7 @@
   Ana ekran. Iki hali var:
    - Bos: ortada tek buyuk "Belge Tara" dugmesi
    - Sayfa var: sayfalar alt alta (her sayfanin altinda Kirp/Dondur/Sil),
-     en altta Gorunum secimi + Sayfa Ekle / PDF Kaydet / Paylas
+     en altta tek sira: + Sayfa / PDF Kaydet / Paylas
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -96,72 +96,10 @@
             android:paddingBottom="12dp"
             android:visibility="gone">
 
-            <!-- Gorunum: tek secim, secili olan dolu mavi -->
+            <!-- Ana islemler (goruntu ayari yok: temizligi Google'in tarayicisi yapar) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/filterOriginal"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="52dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:paddingHorizontal="2dp"
-                    android:text="@string/filter_original"
-                    android:textAllCaps="false"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="12dp"
-                    app:strokeColor="@color/primary"
-                    app:strokeWidth="1.5dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/filterClean"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="52dp"
-                    android:layout_marginHorizontal="4dp"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:paddingHorizontal="2dp"
-                    android:text="@string/filter_clean"
-                    android:textAllCaps="false"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="12dp"
-                    app:strokeColor="@color/primary"
-                    app:strokeWidth="1.5dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/filterBw"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="52dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:paddingHorizontal="2dp"
-                    android:text="@string/filter_bw"
-                    android:textAllCaps="false"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="12dp"
-                    app:strokeColor="@color/primary"
-                    app:strokeWidth="1.5dp" />
-            </LinearLayout>
-
-            <!-- Ana islemler -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton

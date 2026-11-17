@@ -4,9 +4,7 @@ import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -28,7 +26,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.eser.belgetarayici.databinding.ActivityMainBinding
 import com.eser.belgetarayici.databinding.ItemPageBinding
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -42,25 +39,25 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Eser Lens ana ekrani (vFlat tarzi sade akis):
- *  1) Uygulama acilinca kamera tarayici hemen acilir (belgeyi bulup kendisi ceker).
+ *  1) Uygulama acilinca Google'in belge tarayicisi hemen acilir: belgeyi bulur,
+ *     kendisi ceker, kirpar ve TEMIZLER (golge, leke, parmak). Goruntu temizligi
+ *     tamamen Google'in motorunda; bu uygulama goruntunun rengine/tonuna DOKUNMAZ.
  *  2) Taranan sayfalar alt alta gorunur; her sayfanin altinda Kirp / Dondur / Sil
  *     (iki sayfalik kitap cekiminde ayrica "Ikiye Bol").
- *  3) Altta: Gorunum (Orijinal / Net Belge / Siyah-Beyaz) ve
- *     + Sayfa / PDF Kaydet / Paylas.
- * Yapay zeka YOK: her islem ongorulebilir, sayfayi bozmaz.
+ *  3) Altta: + Sayfa / PDF Kaydet / Paylas.
+ * Yapay zeka yok, OpenCV yok, kendi filtremiz yok: sayfayi bozacak katman kalmadi.
  */
 class MainActivity : AppCompatActivity() {
 
-    /** base: kirp/dondur uygulanmis sayfa; shown: secili gorunum uygulanmis hali. */
-    class Page(val base: File, val shown: File) {
-        fun delete() { base.delete(); shown.delete() }
+    /** Bir sayfa = tek JPEG dosyasi (Kirp/Dondur/Bol dogrudan bunu degistirir). */
+    class Page(val file: File) {
+        fun delete() { file.delete() }
     }
 
     class PageHolder(val b: ItemPageBinding) : RecyclerView.ViewHolder(b.root)
 
     companion object {
-        private const val WORK_DIM = 2000   // isleme/PDF cozunurlugu (uzun kenar)
-        private const val EDIT_DIM = 3000   // dondurme/bolme sirasinda ust sinir
+        private const val EDIT_DIM = 4000   // dondurme/bolme sirasinda ust sinir (uzun kenar)
         private const val REQ_STORAGE = 42
         private const val PENDING_PDF = 1
         private const val PENDING_IMAGES = 2
@@ -76,7 +73,6 @@ class MainActivity : AppCompatActivity() {
     private val worker = Executors.newSingleThreadExecutor()
     private val fileCounter = AtomicInteger(0)
 
-    @Volatile private var filter = DocEnhancer.Mode.COLOR   // varsayilan: Net Belge
     private var addMode = false      // true: yeni sayfalar sona eklenir, false: yenileri eskilerin yerine
     private var cropIndex = -1
     private var unsaved = false
@@ -89,9 +85,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // OpenCV'yi arka planda hazirla
-        worker.execute { OpenCvProcessor.ensureInit() }
 
         scannerLauncher = registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
@@ -115,11 +108,8 @@ class MainActivity : AppCompatActivity() {
             val i = cropIndex
             cropIndex = -1
             if (res.resultCode == Activity.RESULT_OK && i in pages.indices) {
-                val p = pages[i]
-                runTask(getString(R.string.processing), { renderPage(p) }) {
-                    adapter.notifyItemChanged(i)
-                    unsaved = true
-                }
+                adapter.notifyItemChanged(i)
+                unsaved = true
             }
         }
 
@@ -140,9 +130,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnAddPage.setOnClickListener { startScan(add = true) }
         binding.btnSavePdf.setOnClickListener { savePdf() }
         binding.btnShare.setOnClickListener { sharePdf() }
-        binding.filterOriginal.setOnClickListener { setFilter(DocEnhancer.Mode.ORIGINAL) }
-        binding.filterClean.setOnClickListener { setFilter(DocEnhancer.Mode.COLOR) }
-        binding.filterBw.setOnClickListener { setFilter(DocEnhancer.Mode.BW) }
 
         // Geri tusu: kaydedilmemis sayfa varsa once sor
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -171,7 +158,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ----------------------------------------------------------------------
-    // Tarama
+    // Tarama (goruntu temizligi tamamen Google'in tarayicisinda)
     // ----------------------------------------------------------------------
     private fun startScan(add: Boolean) {
         addMode = add
@@ -179,6 +166,7 @@ class MainActivity : AppCompatActivity() {
             .setGalleryImportAllowed(true)
             .setPageLimit(30)
             .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+            // FULL: otomatik cekim + kenar bulma + filtreler + leke/parmak silme
             .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
             .build()
 
@@ -200,21 +188,15 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    /** Taranan/secilen gorselleri sayfa yap. Tarayicinin kirpmasina DOKUNULMAZ. */
+    /** Taranan/secilen gorselleri sayfa yap. Goruntuye HICBIR isleme yapilmaz. */
     private fun addPages(uris: List<Uri>) {
         val replace = !addMode
         addMode = false
         runTask(getString(R.string.processing), {
             val added = ArrayList<Page>()
-            uris.forEachIndexed { i, uri ->
-                if (uris.size > 1) progress(getString(R.string.progress, i + 1, uris.size))
+            for (uri in uris) {
                 val p = newPage()
-                if (copyUri(uri, p.base)) {
-                    renderPage(p)
-                    added.add(p)
-                } else {
-                    p.delete()
-                }
+                if (copyUri(uri, p.file)) added.add(p) else p.delete()
             }
             added
         }) { added -> showAddedPages(added, replace) }
@@ -239,56 +221,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun newPage(): Page {
         val n = fileCounter.incrementAndGet()
-        return Page(File(outputDir, "sayfa${n}_ham.jpg"), File(outputDir, "sayfa$n.jpg"))
-    }
-
-    /** Sayfanin gosterilen halini secili gorunume gore yeniden uret. */
-    private fun renderPage(p: Page) {
-        val mode = filter
-        if (mode == DocEnhancer.Mode.ORIGINAL) {
-            p.base.copyTo(p.shown, overwrite = true)
-            return
-        }
-        val src = ImageUtils.decodeScaled(p.base, WORK_DIM)
-        val out = OpenCvProcessor.process(src, mode)
-        ImageUtils.writeJpeg(out, p.shown, 92)
-        if (out !== src) out.recycle()
-        src.recycle()
-    }
-
-    // ----------------------------------------------------------------------
-    // Gorunum (filtre)
-    // ----------------------------------------------------------------------
-    private fun setFilter(mode: DocEnhancer.Mode) {
-        if (mode == filter) return
-        filter = mode
-        highlightFilter()
-        if (pages.isEmpty()) return
-        val snapshot = pages.toList()
-        runTask(getString(R.string.processing), {
-            snapshot.forEachIndexed { i, p ->
-                if (snapshot.size > 1) progress(getString(R.string.progress, i + 1, snapshot.size))
-                renderPage(p)
-            }
-        }) {
-            adapter.notifyDataSetChanged()
-            unsaved = true
-        }
-    }
-
-    private fun highlightFilter() {
-        val primary = ContextCompat.getColor(this, R.color.primary)
-        val dark = ContextCompat.getColor(this, R.color.primary_dark)
-        listOf(
-            DocEnhancer.Mode.ORIGINAL to binding.filterOriginal,
-            DocEnhancer.Mode.COLOR to binding.filterClean,
-            DocEnhancer.Mode.BW to binding.filterBw
-        ).forEach { (mode, btn) -> styleChoice(btn, mode == filter, primary, dark) }
-    }
-
-    private fun styleChoice(btn: MaterialButton, selected: Boolean, primary: Int, dark: Int) {
-        btn.backgroundTintList = ColorStateList.valueOf(if (selected) primary else Color.TRANSPARENT)
-        btn.setTextColor(if (selected) Color.WHITE else dark)
+        return Page(File(outputDir, "sayfa$n.jpg"))
     }
 
     // ----------------------------------------------------------------------
@@ -298,19 +231,18 @@ class MainActivity : AppCompatActivity() {
         val p = pages.getOrNull(index) ?: return
         cropIndex = index
         val intent = Intent(this, CropActivity::class.java)
-        intent.putExtra(CropActivity.EXTRA_PATH, p.base.absolutePath)
+        intent.putExtra(CropActivity.EXTRA_PATH, p.file.absolutePath)
         cropLauncher.launch(intent)
     }
 
     private fun rotatePage(index: Int) {
         val p = pages.getOrNull(index) ?: return
         runTask(getString(R.string.rotating), {
-            val bmp = ImageUtils.decodeScaled(p.base, EDIT_DIM)
+            val bmp = ImageUtils.decodeScaled(p.file, EDIT_DIM)
             val rot = ImageUtils.rotate90(bmp)
-            ImageUtils.writeJpeg(rot, p.base, 95)
+            ImageUtils.writeJpeg(rot, p.file, 95)
             if (rot !== bmp) rot.recycle()
             bmp.recycle()
-            renderPage(p)
         }) {
             adapter.notifyItemChanged(index)
             unsaved = true
@@ -321,17 +253,15 @@ class MainActivity : AppCompatActivity() {
     private fun splitPage(index: Int) {
         val p = pages.getOrNull(index) ?: return
         runTask(getString(R.string.splitting), {
-            val bmp = ImageUtils.decodeScaled(p.base, EDIT_DIM)
+            val bmp = ImageUtils.decodeScaled(p.file, EDIT_DIM)
             val cut = ImageUtils.findGutter(bmp)
             val left = Bitmap.createBitmap(bmp, 0, 0, cut, bmp.height)
             val right = Bitmap.createBitmap(bmp, cut, 0, bmp.width - cut, bmp.height)
             val pl = newPage()
             val pr = newPage()
-            ImageUtils.writeJpeg(left, pl.base, 95)
-            ImageUtils.writeJpeg(right, pr.base, 95)
+            ImageUtils.writeJpeg(left, pl.file, 95)
+            ImageUtils.writeJpeg(right, pr.file, 95)
             left.recycle(); right.recycle(); bmp.recycle()
-            renderPage(pl)
-            renderPage(pr)
             Pair(pl, pr)
         }) { (pl, pr) ->
             if (index in pages.indices) pages.removeAt(index).delete()
@@ -374,7 +304,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun openTextScreen() {
         if (pages.isEmpty()) return
-        val paths = ArrayList(pages.map { it.shown.absolutePath })
+        val paths = ArrayList(pages.map { it.file.absolutePath })
         val intent = Intent(this, TextActivity::class.java)
         intent.putStringArrayListExtra(TextActivity.EXTRA_IMAGE_PATHS, paths)
         startActivity(intent)
@@ -394,7 +324,7 @@ class MainActivity : AppCompatActivity() {
     private fun savePdf() {
         if (pages.isEmpty()) return
         if (needsLegacyPerm()) { pendingAction = PENDING_PDF; requestLegacyPerm(); return }
-        val files = pages.map { it.shown }
+        val files = pages.map { it.file }
         runTask(getString(R.string.making_pdf), { savePdfToDownloads(buildPdf(files)) }) { err ->
             if (err == null) {
                 unsaved = false
@@ -407,7 +337,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun sharePdf() {
         if (pages.isEmpty()) return
-        val files = pages.map { it.shown }
+        val files = pages.map { it.file }
         runTask(getString(R.string.making_pdf), { buildPdf(files) }) { pdf ->
             val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", pdf)
             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -422,7 +352,7 @@ class MainActivity : AppCompatActivity() {
     private fun saveImages() {
         if (pages.isEmpty()) return
         if (needsLegacyPerm()) { pendingAction = PENDING_IMAGES; requestLegacyPerm(); return }
-        val files = pages.map { it.shown }
+        val files = pages.map { it.file }
         runTask(getString(R.string.saving), {
             var ok = 0
             var err: String? = null
@@ -557,11 +487,11 @@ class MainActivity : AppCompatActivity() {
         override fun onBindViewHolder(h: PageHolder, position: Int) {
             val p = pages[position]
             h.b.pageLabel.text = getString(R.string.page_label, position + 1, pages.size)
-            val (w, ht) = ImageUtils.size(p.shown)
+            val (w, ht) = ImageUtils.size(p.file)
             // Genis cekim = buyuk ihtimalle iki sayfalik kitap -> "Ikiye Bol" goster
             h.b.btnSplit.visibility = if (w > ht * 1.15) View.VISIBLE else View.GONE
             val reqW = binding.pageList.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
-            h.b.pageImage.setImageBitmap(ImageUtils.decodePreview(p.shown, reqW))
+            h.b.pageImage.setImageBitmap(ImageUtils.decodePreview(p.file, reqW))
         }
 
         private fun pos(h: PageHolder): Int? =
@@ -578,7 +508,6 @@ class MainActivity : AppCompatActivity() {
         binding.bottomPanel.visibility = if (has) View.VISIBLE else View.GONE
         binding.toolbar.subtitle = if (has) getString(R.string.page_count, pages.size) else null
         binding.toolbar.menu.setGroupVisible(R.id.group_pages, has)
-        highlightFilter()
     }
 
     /**
@@ -596,11 +525,6 @@ class MainActivity : AppCompatActivity() {
                     .onFailure { toast(getString(R.string.processing_failed)) }
             }
         }
-    }
-
-    /** Arka plandan ilerleme yazisini guncelle ("Hazirlaniyor… 3 / 10"). */
-    private fun progress(msg: String) {
-        runOnUiThread { binding.procText.text = msg }
     }
 
     private fun setBusy(busy: Boolean, msg: String) {

@@ -80,13 +80,12 @@ jobs:
           Eski Eser Lens'i silmeden üstüne kurulur.
 
           **Bu sürümde:**
-          - Yapay zekâ tamamen kaldırıldı (sayfaları bozuyordu)
+          - Yapay zekâ, OpenCV ve uygulamanın kendi filtreleri tamamen kaldırıldı (sayfaları bozuyordu)
+          - Görüntü temizliğini sadece Google'ın tarayıcısı yapıyor; uygulama sayfanın rengine/tonuna dokunmuyor
           - Uygulama açılınca kamera hemen açılır, belgeyi bulunca kendisi çeker
           - Her sayfanın altında: Kırp / Döndür / Sil (kitap çekiminde İkiye Böl)
-          - Altta sadece: Orijinal / Net Belge / Siyah-Beyaz ve + Sayfa / PDF Kaydet / Paylaş
-          - Net Belge fotoğraf, TV/ekran görüntüsü gibi belge olmayan şeylere artık dokunmuyor (soldurma ve benek yok)
-          - Net Belge artık silik ve kurşun kalem yazıyı silmiyor
-          - Kırp ve Döndür artık sadece o sayfaya uygulanıyor
+          - Altta tek sıra: + Sayfa / PDF Kaydet / Paylaş
+          - Kırp ve Döndür sadece o sayfaya uygulanıyor
 
           Sürüm $VER · $DATE
           EOF

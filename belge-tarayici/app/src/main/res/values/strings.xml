@@ -4,13 +4,8 @@
 
     <!-- Bos ekran -->
     <string name="empty_title">Belge taramaya hazır</string>
-    <string name="empty_subtitle">Kamera açılınca belgeyi çerçeveye al. Belgeyi bulunca kendisi çeker.\n\nGalerideki bir fotoğrafı taramak için kamera ekranındaki resim simgesine bas.</string>
+    <string name="empty_subtitle">Kamera açılınca belgeyi çerçeveye al. Belgeyi bulunca kendisi çeker.\n\nÇektikten sonraki ekranda görüntüyü temizleyebilir, renk ayarını seçebilirsin.\n\nGalerideki bir fotoğrafı taramak için kamera ekranındaki resim simgesine bas.</string>
     <string name="scan_big">Belge Tara</string>
-
-    <!-- Gorunum (filtre) -->
-    <string name="filter_original">Orijinal</string>
-    <string name="filter_clean">Net Belge</string>
-    <string name="filter_bw">Siyah-Beyaz</string>
 
     <!-- Alt dugmeler -->
     <string name="add_page">+ Sayfa</string>
@@ -32,7 +27,6 @@
 
     <!-- Islem mesajlari -->
     <string name="processing">Hazırlanıyor…</string>
-    <string name="progress">Hazırlanıyor… %1$d / %2$d</string>
     <string name="rotating">Döndürülüyor…</string>
     <string name="splitting">Sayfa ikiye bölünüyor…</string>
     <string name="making_pdf">PDF hazırlanıyor…</string>

@@ -15,7 +15,7 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
 
-        // OpenCV native kutuphaneleri: yaygin telefon mimarileri (boyut icin)
+        // Yazi okuma/ceviri native kutuphaneleri: yaygin telefon mimarileri (boyut icin)
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
@@ -58,7 +58,7 @@ android {
         viewBinding = true
     }
 
-    // OpenCV ve ML Kit ayni native kutuphaneyi (libc++_shared.so) getirebilir;
+    // ML Kit kutuphaneleri ayni native kutuphaneyi (libc++_shared.so) getirebilir;
     // cakismayi onle
     packaging {
         jniLibs {
@@ -83,7 +83,6 @@ dependencies {
     implementation("com.google.mlkit:language-id:17.0.6")
     // Cihazda (cevrimdisi) ceviri - 50+ dil.
     implementation("com.google.mlkit:translate:17.0.3")
-    // OpenCV: otomatik kenar tespiti, perspektif duzeltme, CLAHE,
-    // adaptive threshold (Adobe Scan / MS Lens seviyesi isleme).
-    implementation("org.opencv:opencv:4.11.0")
+    // OpenCV KALDIRILDI: goruntu temizligi tamamen Google'in tarayicisinda.
+    // Kendi filtrelerimiz (yapay zeka, Net Belge) sayfalari bozuyordu.
 }
