@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     class PageHolder(val b: ItemPageBinding) : RecyclerView.ViewHolder(b.root)
 
     companion object {
-        private const val WORK_DIM = 2200   // isleme/PDF cozunurlugu (uzun kenar)
+        private const val WORK_DIM = 2000   // isleme/PDF cozunurlugu (uzun kenar)
         private const val EDIT_DIM = 3000   // dondurme/bolme sirasinda ust sinir
         private const val REQ_STORAGE = 42
         private const val PENDING_PDF = 1

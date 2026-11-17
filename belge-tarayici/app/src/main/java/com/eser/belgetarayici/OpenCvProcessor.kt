@@ -16,12 +16,11 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * OpenCV tabanli belge isleme zinciri (Adobe Scan / MS Lens tarzi):
- *  autoCrop: Canny + kontur ile belgeyi otomatik bul -> warpPerspective (duz A4)
- *  COLOR : CLAHE (isik dengeleme) + beyaz dengesi + unsharp (keskin, renkli)
- *  GRAY  : CLAHE gri + keskinlestirme
- *  BW    : CLAHE + bilateral + Adaptive Gaussian Threshold + morphology (OCR icin)
- * OpenCV hazir degilse saf-Kotlin DocEnhancer'a duser.
+ * OpenCV tabanli belge isleme:
+ *  COLOR ("Net Belge"): sadece BELGEYSE golge siler + kagidi beyazlatir;
+ *                       fotograf/ekran gibi belge olmayan goruntuye dokunmaz
+ *  BW ("Siyah-Beyaz"): belgede esikleme; belge degilse duz siyah-beyaz fotograf
+ * OpenCV hazir degilse ya da hata olursa goruntu oldugu gibi birakilir.
  */
 object OpenCvProcessor {
 
@@ -159,7 +158,9 @@ object OpenCvProcessor {
     // ----------------------------------------------------------------------
     fun process(src: Bitmap, mode: DocEnhancer.Mode): Bitmap {
         if (mode == DocEnhancer.Mode.ORIGINAL) return src
-        if (!ensureInit()) return DocEnhancer.process(src, mode)
+        // OpenCV yoksa ya da hata olursa sayfaya DOKUNMA. (Eski saf-Kotlin yedek
+        // DocEnhancer da fotografi/ekrani soldurup bozuyordu.)
+        if (!ensureInit()) return src
         return try {
             when (mode) {
                 DocEnhancer.Mode.COLOR -> colorMode(src)
@@ -170,111 +171,197 @@ object OpenCvProcessor {
                 else -> src
             }
         } catch (e: Throwable) {
-            DocEnhancer.process(src, mode)
+            src
         }
     }
 
-    // Golge Temizle: isik haritasina bolerek (flat-field) golgeyi siler,
-    // kagidi beyazlatir, RENGI ve yaziyi korur (siyah-beyaz yapmaz).
+    // ----------------------------------------------------------------------
+    // NET BELGE
+    // ----------------------------------------------------------------------
+    // Eski surum HER goruntuyu kagit sanip zorla beyazlatiyordu: TV ekrani,
+    // fotograf gibi seyleri soldurup beneklere ceviriyordu (sert renk maskesi +
+    // sinirsiz golge kazanci). Yeni kural:
+    //  1) Goruntunun en az %45'i "kagit" (golgesi alininca parlak + renksiz)
+    //     degilse BELGE DEGILDIR -> hic dokunulmaz.
+    //  2) Belgede de sadece kagitla cevrili bolgeler (yazi, cizgi) temizlenir;
+    //     sayfadaki fotograf/renkli alan oldugu gibi kalir. Gecisler yumusak.
+    //  3) Kase/imza rengi yumusak geri konur: benek olusmaz.
+    // Python/cv2 4.11 olcumu (uzun kenar 2000px, telefondaki ayarla birebir):
+    //   astronot, kahve, kedi, roket, motor, TV ekrani: fark 0 (dokunulmadi)
+    //   eski surum ayni goruntulerde: fark 60-156, gren 3-27 kat
+    //   gercek taranmis sayfa: kagit 255, kose golgesi 222 (eski: koyu leke)
+    //   sentetik belge: kagit 255, benek %0, yazi 14, mavi kase rengi korundu
+    private const val DOC_MIN_PAPER = 0.45
+
+    /** Seviye 70..230 + gamma 1.3 tek tabloda: kagit beyaz, yazi siyah, silik yazi korunur. */
+    private val levelsGammaTable: ByteArray by lazy {
+        ByteArray(256) { i ->
+            val lv = ((i - 70.0) * 255.0 / 160.0).coerceIn(0.0, 255.0)
+            Math.round(255.0 * Math.pow(lv / 255.0, 1.3)).toInt().coerceIn(0, 255).toByte()
+        }
+    }
+
+    /** ff8: golgesi alinmis goruntu (8UC3), paper: kagit maskesi (8UC1), fraction: kagit orani. */
+    private class PaperInfo(val ff8: Mat, val paper: Mat, val fraction: Double) {
+        fun release() { ff8.release(); paper.release() }
+    }
+
+    /** Golgeyi sinirli kazancla al ve kagit piksellerini bul. rgb8: RGB 8UC3. */
+    private fun analyzePaper(rgb8: Mat): PaperInfo {
+        val w = rgb8.cols(); val h = rgb8.rows()
+        val den = Mat(); Imgproc.medianBlur(rgb8, den, 3)
+        val lum = Mat(); Imgproc.cvtColor(den, lum, Imgproc.COLOR_RGB2GRAY)
+
+        // Isik haritasi (kagidin yerel parlakligi): 1/4 olcekte hesapla (hizli)
+        val small = Mat()
+        Imgproc.resize(
+            lum, small, Size(max(1, w / 4).toDouble(), max(1, h / 4).toDouble()),
+            0.0, 0.0, Imgproc.INTER_AREA
+        )
+        lum.release()
+        val k = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(13.0, 13.0))
+        Imgproc.morphologyEx(small, small, Imgproc.MORPH_CLOSE, k)
+        Imgproc.GaussianBlur(small, small, Size(0.0, 0.0), 6.25)
+        val bg = Mat()
+        Imgproc.resize(small, bg, Size(w.toDouble(), h.toDouble()), 0.0, 0.0, Imgproc.INTER_LINEAR)
+        small.release(); k.release()
+
+        // Kazanc = 250 / isik, 0.9..3.0 arasi: koyu alan (TV, fotograf) patlatilmaz
+        val gain = Mat(); bg.convertTo(gain, CvType.CV_32F); bg.release()
+        Core.max(gain, Scalar(1.0), gain)
+        Core.divide(250.0, gain, gain)
+        Core.min(gain, Scalar(3.0), gain)
+        Core.max(gain, Scalar(0.9), gain)
+
+        val chans = ArrayList<Mat>(); Core.split(den, chans); den.release()
+        val f = Mat()
+        for (i in 0 until 3) {
+            chans[i].convertTo(f, CvType.CV_32F)
+            Core.multiply(f, gain, f)
+            f.convertTo(chans[i], CvType.CV_8U)   // yuvarlar ve 0..255'e kirpar
+        }
+        f.release(); gain.release()
+        val ff8 = Mat(); Core.merge(chans, ff8)
+        chans.forEach { it.release() }
+
+        // Kagit = golgesi alininca parlak (>=215) ve renksiz (doygunluk <=44)
+        val gray = Mat(); Imgproc.cvtColor(ff8, gray, Imgproc.COLOR_RGB2GRAY)
+        val hsv = Mat(); Imgproc.cvtColor(ff8, hsv, Imgproc.COLOR_RGB2HSV)
+        val hs = ArrayList<Mat>(); Core.split(hsv, hs); hsv.release()
+        val bright = Mat(); Imgproc.threshold(gray, bright, 214.0, 255.0, Imgproc.THRESH_BINARY)
+        val lowSat = Mat(); Imgproc.threshold(hs[1], lowSat, 44.0, 255.0, Imgproc.THRESH_BINARY_INV)
+        val paper = Mat(); Core.bitwise_and(bright, lowSat, paper)
+        gray.release(); bright.release(); lowSat.release(); hs.forEach { it.release() }
+
+        val frac = Core.countNonZero(paper).toDouble() / (w.toDouble() * h.toDouble())
+        return PaperInfo(ff8, paper, frac)
+    }
+
+    /** Goruntu belge mi (kagit orani yeterli mi)? rgba: RGBA 8UC4. */
+    private fun looksLikeDocument(rgba: Mat): Boolean {
+        val rgb = Mat(); Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)
+        val info = analyzePaper(rgb)
+        val ok = info.fraction >= DOC_MIN_PAPER
+        info.release(); rgb.release()
+        return ok
+    }
+
+    /** 0..1 arasi yumusak gecis (tek kanal float). */
+    private fun smoothstep(x: Mat, a: Double, b: Double): Mat {
+        val t = Mat()
+        Core.subtract(x, Scalar(a), t)
+        Core.multiply(t, Scalar(1.0 / (b - a)), t)
+        Core.min(t, Scalar(1.0), t)
+        Core.max(t, Scalar(0.0), t)
+        val k = Mat()
+        Core.multiply(t, Scalar(-2.0), k)
+        Core.add(k, Scalar(3.0), k)        // 3 - 2t
+        Core.multiply(t, t, t)             // t^2
+        Core.multiply(t, k, t)             // t^2 (3 - 2t)
+        k.release()
+        return t
+    }
+
     private fun colorMode(src: Bitmap): Bitmap {
         val rgba = Mat(); Utils.bitmapToMat(src, rgba)
-        val rgb = Mat(); Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)
+        val rgb = Mat(); Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB); rgba.release()
+        val w = rgb.cols(); val h = rgb.rows()
 
-        // TEK luminans arka plani ile bol (renk oranlari korunur -> mor/pembe
-        // kayma OLMAZ). Per-kanal bolme renk lekesi yapiyordu.
-        // Foto grenini once yumusat (benekleşmeyi engeller)
-        Imgproc.medianBlur(rgb, rgb, 3)
-
-        val chans = ArrayList<Mat>(); Core.split(rgb, chans)
-        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(51.0, 51.0))
-        val lum = Mat(); Imgproc.cvtColor(rgb, lum, Imgproc.COLOR_RGB2GRAY)
-        val bg = Mat()
-        Imgproc.morphologyEx(lum, bg, Imgproc.MORPH_CLOSE, kernel)
-        Imgproc.GaussianBlur(bg, bg, Size(0.0, 0.0), 25.0)
-        val bgF = Mat(); bg.convertTo(bgF, CvType.CV_32F)
-        Core.add(bgF, Scalar(1.0), bgF)
-        for (i in 0 until 3) {
-            val chF = Mat(); chans[i].convertTo(chF, CvType.CV_32F)
-            Core.divide(chF, bgF, chF)
-            Core.multiply(chF, Scalar(255.0), chF)
-            chF.convertTo(chans[i], CvType.CV_8U)
+        val info = analyzePaper(rgb)
+        if (info.fraction < DOC_MIN_PAPER) {
+            // Belge degil (fotograf, ekran, manzara): DOKUNMA
+            info.release(); rgb.release()
+            return src
         }
-        Core.merge(chans, rgb)
+        val ff8 = info.ff8
+        val paper = info.paper
 
-        // Beyaz dengesi: parlak (kagit) pikselleri notr yap -> renk lekesi gider
-        val gray = Mat(); Imgproc.cvtColor(rgb, gray, Imgproc.COLOR_RGB2GRAY)
-        val mask = Mat(); Imgproc.threshold(gray, mask, 200.0, 255.0, Imgproc.THRESH_BINARY)
-        val m = Core.mean(rgb, mask)
+        // Yerel kagit yogunlugu (1/8 olcek, hizli): yazi kagitla cevrili -> yuksek,
+        // sayfadaki fotograf/renkli alan -> dusuk. Belge bitisi agirligi buradan.
+        val pf = Mat(); paper.convertTo(pf, CvType.CV_32F, 1.0 / 255.0)
+        val ps = Mat()
+        Imgproc.resize(
+            pf, ps, Size(max(1, w / 8).toDouble(), max(1, h / 8).toDouble()),
+            0.0, 0.0, Imgproc.INTER_AREA
+        )
+        pf.release()
+        Imgproc.GaussianBlur(ps, ps, Size(0.0, 0.0), 0.03 * max(w, h) / 8.0)
+        val dens = Mat()
+        Imgproc.resize(ps, dens, Size(w.toDouble(), h.toDouble()), 0.0, 0.0, Imgproc.INTER_LINEAR)
+        ps.release()
+        val wdoc = smoothstep(dens, 0.40, 0.70); dens.release()
+
+        // Beyaz dengesi: kagit pikselleri notr (renk lekesi gider)
+        val m = Core.mean(ff8, paper)
+        paper.release()
         val g = (m.`val`[0] + m.`val`[1] + m.`val`[2]) / 3.0
-        if (g > 1.0) {
-            Core.multiply(
-                rgb,
-                Scalar(
-                    clamp(g / max(1.0, m.`val`[0]), 0.95, 1.08),
-                    clamp(g / max(1.0, m.`val`[1]), 0.95, 1.08),
-                    clamp(g / max(1.0, m.`val`[2]), 0.95, 1.08)
-                ),
-                rgb
-            )
+        Core.multiply(
+            ff8,
+            Scalar(
+                clamp(g / max(1.0, m.`val`[0]), 0.95, 1.08),
+                clamp(g / max(1.0, m.`val`[1]), 0.95, 1.08),
+                clamp(g / max(1.0, m.`val`[2]), 0.95, 1.08)
+            ),
+            ff8
+        )
+
+        // Renkli icerik agirligi (kase/imza): yumusak, benek yapmaz
+        val hsv = Mat(); Imgproc.cvtColor(ff8, hsv, Imgproc.COLOR_RGB2HSV)
+        val hs = ArrayList<Mat>(); Core.split(hsv, hs); hsv.release()
+        val satF = Mat(); hs[1].convertTo(satF, CvType.CV_32F); hs.forEach { it.release() }
+        Imgproc.GaussianBlur(satF, satF, Size(0.0, 0.0), 1.5)
+        val cw = smoothstep(satF, 50.0, 90.0); satF.release()
+
+        // Belge bitisi (seviye + gamma) tek tabloyla
+        val lut = Mat(1, 256, CvType.CV_8UC1); lut.put(0, 0, levelsGammaTable)
+        val doc8 = Mat(); Core.LUT(ff8, lut, doc8); lut.release()
+        val docCh = ArrayList<Mat>(); Core.split(doc8, docCh); doc8.release()
+        val ffCh = ArrayList<Mat>(); Core.split(ff8, ffCh); ff8.release()
+        val srcCh = ArrayList<Mat>(); Core.split(rgb, srcCh); rgb.release()
+
+        val d = Mat(); val f = Mat(); val s = Mat(); val bl = Mat()
+        val outCh = ArrayList<Mat>()
+        for (c in 0 until 3) {
+            docCh[c].convertTo(d, CvType.CV_32F); docCh[c].release()
+            ffCh[c].convertTo(f, CvType.CV_32F); ffCh[c].release()
+            // renkli icerigi geri koy: d = d + (f - d) * cw
+            Core.subtract(f, d, f); Core.multiply(f, cw, f); Core.add(d, f, d)
+            // hafif keskinlik
+            Imgproc.GaussianBlur(d, bl, Size(0.0, 0.0), 1.5)
+            Core.addWeighted(d, 1.2, bl, -0.2, 0.0, d)
+            // harman: kagit bolgesi belge bitisi, kalan yer ORIJINAL: o = s + (d - s) * wdoc
+            srcCh[c].convertTo(s, CvType.CV_32F); srcCh[c].release()
+            Core.subtract(d, s, d); Core.multiply(d, wdoc, d); Core.add(s, d, d)
+            val o = Mat(); d.convertTo(o, CvType.CV_8U); outCh.add(o)
         }
+        d.release(); f.release(); s.release(); bl.release(); cw.release(); wdoc.release()
 
-        // Arka plani bembeyaz temizle + kontrast (puruzsuz seviye ayari, benek yok)
-        // Kagit -> beyaz, yazi -> siyah, kase/imza rengi korunur
-        whitenPaper(rgb)
-
-        // Hafif keskinlik (yazi 'dolma kalem' gibi kalinlasmasin - dusuk tutuldu)
-        val blur = Mat(); Imgproc.GaussianBlur(rgb, blur, Size(0.0, 0.0), 1.5)
-        Core.addWeighted(rgb, 1.2, blur, -0.2, 0.0, rgb)
-
-        val outRgba = Mat(); Imgproc.cvtColor(rgb, outRgba, Imgproc.COLOR_RGB2RGBA)
-        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val out3 = Mat(); Core.merge(outCh, out3); outCh.forEach { it.release() }
+        val outRgba = Mat(); Imgproc.cvtColor(out3, outRgba, Imgproc.COLOR_RGB2RGBA); out3.release()
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(outRgba, out)
+        outRgba.release()
         return out
-    }
-
-    /**
-     * Kagit arka planini tertemiz beyaza ceker (vFlat/CamScanner gorunumu).
-     * BENEK YAPMAZ: yerel esikleme yerine PURUZSUZ global seviye ayari kullanir.
-     *  - seviye (levels): siyah nokta 70, beyaz nokta 230 -> kagit bembeyaz, yazi siyah,
-     *    tek bir affine + kirpma oldugu icin karabiber benek OLUSMAZ
-     *  - orta ton koyulastirma (gamma 1.3): silik/kursun kalem yazi okunur kalir
-     *  - renkli icerik (mavi kase, imza): orijinal renginde geri konur (bozulmaz)
-     * Eski ayar (beyaz nokta 205 + ikinci medianBlur) kagidin %80'inden acik her seyi
-     * SILIYORDU: kursun kalem notlari kayboluyordu. Python/cv2 4.11 olcumu (golgeli+grenli):
-     *   eski: kagit 255, benek %0, kalem kontrasti 0.4  (yazi yok oldu)
-     *   yeni: kagit 255, benek %0, kalem kontrasti 59   (fotograftakinden de net)
-     * rgb: RGB, 8UC3 (yerinde degistirilir).
-     */
-    fun whitenPaper(rgb: Mat) {
-        // Renkli icerigi sonradan geri koymak icin orijinali sakla
-        val orig = rgb.clone()
-
-        // Seviye ayari: out = (in - bp) * 255/(wp - bp)  (bp=70, wp=230)
-        // Golgesi alinmis kagit (~250) -> 255 beyaz, yazi (~80) -> ~0 siyah
-        val bp = 70.0; val wp = 230.0
-        val scale = 255.0 / (wp - bp)
-        rgb.convertTo(rgb, -1, scale, -bp * scale)
-
-        // Orta tonlari hafif koyulastir: beyaz 255'te kalir, silik yazi belirginlesir
-        val table = ByteArray(256) { i ->
-            Math.round(255.0 * Math.pow(i / 255.0, 1.3)).toInt().coerceIn(0, 255).toByte()
-        }
-        val lut = Mat(1, 256, CvType.CV_8UC1)
-        lut.put(0, 0, table)
-        val toned = Mat()
-        Core.LUT(rgb, lut, toned)
-        toned.copyTo(rgb)
-        toned.release(); lut.release()
-
-        // Renkli (doygun) icerigi orijinalden geri koy: kase/imza rengi birebir kalir
-        val hsv = Mat(); Imgproc.cvtColor(orig, hsv, Imgproc.COLOR_RGB2HSV)
-        val ch = ArrayList<Mat>(); Core.split(hsv, ch)
-        val satMask = Mat(); Imgproc.threshold(ch[1], satMask, 45.0, 255.0, Imgproc.THRESH_BINARY)
-        // Maskeyi biraz genislet: renkli kenarlar da korunsun
-        val k = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, Size(3.0, 3.0))
-        Imgproc.dilate(satMask, satMask, k)
-        orig.copyTo(rgb, satMask)
-        orig.release()
     }
 
     private fun grayMode(src: Bitmap): Bitmap {
@@ -292,6 +379,18 @@ object OpenCvProcessor {
     private fun bwMode(src: Bitmap): Bitmap {
         val rgba = Mat(); Utils.bitmapToMat(src, rgba)
         val gray = Mat(); Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY)
+        // Belge degilse (fotograf, ekran) esikleme her yeri beneklere cevirir:
+        // onun yerine duz siyah-beyaz fotograf ver
+        if (!looksLikeDocument(rgba)) {
+            rgba.release()
+            val grayRgba = Mat(); Imgproc.cvtColor(gray, grayRgba, Imgproc.COLOR_GRAY2RGBA)
+            gray.release()
+            val photo = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+            Utils.matToBitmap(grayRgba, photo)
+            grayRgba.release()
+            return photo
+        }
+        rgba.release()
         // Isik dengeleme + kenar koruyucu gren temizleme
         Imgproc.createCLAHE(2.0, Size(8.0, 8.0)).apply(gray, gray)
         val den = Mat(); Imgproc.bilateralFilter(gray, den, 5, 45.0, 45.0)
