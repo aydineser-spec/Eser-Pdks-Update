@@ -65,11 +65,6 @@ android {
             pickFirsts += "**/libc++_shared.so"
         }
     }
-
-    // ONNX modeli sikistirilmasin (dogrudan okunabilsin)
-    androidResources {
-        noCompress += "onnx"
-    }
 }
 
 dependencies {
@@ -77,6 +72,8 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.activity:activity-ktx:1.9.1")
+    // Sayfa listesi (cok sayfada da akici kaydirma)
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     // Google ML Kit Belge Tarayici motoru: otomatik kenar bulma, perspektif
     // duzeltme, golge/leke temizleme, yazi netlestirme + JPEG & PDF ciktisi.
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
@@ -89,6 +86,4 @@ dependencies {
     // OpenCV: otomatik kenar tespiti, perspektif duzeltme, CLAHE,
     // adaptive threshold (Adobe Scan / MS Lens seviyesi isleme).
     implementation("org.opencv:opencv:4.11.0")
-    // ONNX Runtime: UVDoc AI dewarp modelini cihazda calistirir (buruk/kivrik duzeltme)
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.23.0")
 }

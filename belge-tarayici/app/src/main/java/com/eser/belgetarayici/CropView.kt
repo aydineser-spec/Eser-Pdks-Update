@@ -25,11 +25,11 @@ class CropView(context: Context, attrs: AttributeSet? = null) : View(context, at
     private var drawRect = RectF()
     private var scale = 1f
     private var dragIndex = -1
-    private val touchR = 70f
+    private val dens = resources.displayMetrics.density
 
     private val paintImg = Paint(Paint.FILTER_BITMAP_FLAG)
     private val paintLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#2E7D32"); strokeWidth = 6f; style = Paint.Style.STROKE
+        color = Color.parseColor("#2E7D32"); strokeWidth = 3f * dens; style = Paint.Style.STROKE
     }
     private val paintFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#332E7D32"); style = Paint.Style.FILL
@@ -81,8 +81,9 @@ class CropView(context: Context, attrs: AttributeSet? = null) : View(context, at
         canvas.drawPath(path, paintFill)
         canvas.drawPath(path, paintLine)
         for (c in corners) {
-            canvas.drawCircle(c.x, c.y, 30f, paintDot)
-            canvas.drawCircle(c.x, c.y, 13f, paintDotIn)
+            // Parmakla rahat tutulsun: ekran yogunluguna gore buyuk nokta
+            canvas.drawCircle(c.x, c.y, 16f * dens, paintDot)
+            canvas.drawCircle(c.x, c.y, 7f * dens, paintDotIn)
         }
     }
 

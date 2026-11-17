@@ -1,55 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Eser Lens</string>
-    <string name="scan">📷  Tara</string>
-    <string name="import_images">🖼️  Yükle</string>
-    <string name="no_image_picked">Görüntü seçilmedi</string>
-    <string name="save_images">Galeriye\nKaydet</string>
-    <string name="save_pdf">PDF\nKaydet</string>
-    <string name="share">Paylaş</string>
-    <string name="empty_title">Belgeni tara</string>
-    <string name="empty_subtitle">Aşağıdaki \"BELGE TARA\" düğmesine bas.\nKamera belgeyi otomatik bulur, gölgeleri temizler ve net bir çıktı verir.</string>
-    <string name="mode_original">Orijinal</string>
-    <string name="mode_color">🌓 Gölge Temizle</string>
-    <string name="mode_gray">🩶 Gri</string>
-    <string name="mode_bw">⚫ Siyah-Beyaz</string>
-    <string name="mode_receipt">🧾 Fiş</string>
-    <string name="mode_book">📚 Kitap</string>
-    <string name="processing">İşleniyor… gölgeler temizleniyor</string>
-    <string name="processing_failed">İşleme başarısız oldu</string>
-    <string name="page_count">%1$d sayfa tarandı</string>
-    <string name="saved_images">%1$d görsel galeriye kaydedildi</string>
-    <string name="saved_pdf">PDF, İndirilenler/BelgeTarayici klasörüne kaydedildi</string>
-    <string name="save_failed">Kaydetme başarısız oldu</string>
-    <string name="error_no_result">Sonuç alınamadı</string>
-    <string name="error_start">Tarayıcı başlatılamadı: %1$s</string>
 
-    <string name="get_text">🔤  Yazıyı Al / Çevir</string>
-    <string name="straighten_btn">✂️  Düzelt (Yamuk Kâğıt)</string>
-    <string name="dewarp_btn">🪄  Düzleştir (AI — Kıvrık/Buruk)</string>
-    <string name="dewarping">Yapay zeka düzleştiriyor…</string>
-    <string name="enhance_ai_btn">✨  AI İyileştir (Gölge Sil / Tarayıcı)</string>
-    <string name="enhancing_ai">Yapay zeka iyileştiriyor…</string>
-    <string name="reset_btn">↩️  Sıfırla (Orijinale Dön)</string>
-    <string name="rotate_btn">🔄  Döndür (90°)</string>
+    <!-- Bos ekran -->
+    <string name="empty_title">Belge taramaya hazır</string>
+    <string name="empty_subtitle">Kamera açılınca belgeyi çerçeveye al. Belgeyi bulunca kendisi çeker.\n\nGalerideki bir fotoğrafı taramak için kamera ekranındaki resim simgesine bas.</string>
+    <string name="scan_big">Belge Tara</string>
+
+    <!-- Gorunum (filtre) -->
+    <string name="filter_original">Orijinal</string>
+    <string name="filter_clean">Net Belge</string>
+    <string name="filter_bw">Siyah-Beyaz</string>
+
+    <!-- Alt dugmeler -->
+    <string name="add_page">+ Sayfa</string>
+    <string name="save_pdf">PDF Kaydet</string>
+    <string name="share">Paylaş</string>
+
+    <!-- Ust menu -->
+    <string name="menu_new">Yeni</string>
+    <string name="menu_text">Yazıyı çıkar</string>
+    <string name="menu_gallery">Resim olarak kaydet</string>
+
+    <!-- Sayfa karti -->
+    <string name="page_count">%1$d sayfa</string>
+    <string name="page_label">Sayfa %1$d / %2$d</string>
+    <string name="crop">Kırp</string>
+    <string name="rotate">Döndür</string>
+    <string name="split">İkiye Böl</string>
+    <string name="delete">Sil</string>
+
+    <!-- Islem mesajlari -->
+    <string name="processing">Hazırlanıyor…</string>
+    <string name="progress">Hazırlanıyor… %1$d / %2$d</string>
     <string name="rotating">Döndürülüyor…</string>
-    <string name="tool_crop">✂️\nDüzelt</string>
-    <string name="tool_dewarp">🪄\nDüzleştir</string>
-    <string name="tool_enhance">✨\nİyileştir</string>
-    <string name="tool_rotate">🔄\nDöndür</string>
-    <string name="tool_reset">↩️\nSıfırla</string>
-    <string name="tool_text">🔤\nYazı</string>
-    <string name="panel_hide">▽  Araçları Gizle (evrağı büyüt)</string>
-    <string name="panel_show">△  Araçları Göster</string>
-    <string name="delete_page">✕ Sil</string>
-    <string name="ai_read_btn">🤖  AI ile OKU (Akıllı)</string>
-    <string name="magic_btn">✨  SİHİRLİ TARA  (Hepsi Otomatik)</string>
-    <string name="magic_busy">Sihirli işlem: kırp → düzleştir → gölge sil…</string>
-    <string name="crop_title">Köşeleri belgeye getir</string>
-    <string name="crop_hint">4 yeşil noktayı belgenin köşelerine sürükle, sonra Düzelt\'e bas</string>
-    <string name="do_straighten">DÜZELT</string>
-    <string name="cancel">İptal</string>
-    <string name="straighten_done">Belge düzeltildi</string>
+    <string name="splitting">Sayfa ikiye bölünüyor…</string>
+    <string name="making_pdf">PDF hazırlanıyor…</string>
+    <string name="saving">Kaydediliyor…</string>
+    <string name="processing_failed">Bir hata oldu, tekrar dene</string>
+    <string name="saved_pdf">PDF kaydedildi: İndirilenler › EserLens</string>
+    <string name="saved_images">%1$d sayfa kaydedildi: Resimler › EserLens</string>
+    <string name="save_failed">Kaydedilemedi</string>
+    <string name="permission_denied">Kaydetmek için izin vermen gerekiyor</string>
+    <string name="error_no_result">Tarama sonucu alınamadı</string>
+    <string name="error_start">Kamera tarayıcı açılamadı: %1$s</string>
+
+    <!-- Onay pencereleri -->
+    <string name="cancel">Vazgeç</string>
+    <string name="delete_title">Sayfa silinsin mi?</string>
+    <string name="delete_msg">Sayfa %1$d silinecek.</string>
+    <string name="new_title">Yeni tarama</string>
+    <string name="new_msg">Şu anki sayfaları kaydetmedin. Yeni tarama yaparsan silinecekler.</string>
+    <string name="new_yes">Yeni Tara</string>
+    <string name="exit_title">Çıkılsın mı?</string>
+    <string name="exit_msg">Kaydetmediğin sayfalar silinecek.</string>
+    <string name="exit_yes">Çık</string>
+    <string name="scan_failed_title">Kamera açılamadı</string>
+    <string name="scan_failed_msg">%1$s\n\nGalerideki bir fotoğrafı seçmek ister misin?</string>
+    <string name="pick_gallery">Galeriden Seç</string>
+
+    <!-- Kirpma ekrani -->
+    <string name="crop_hint">Yeşil noktaları belgenin köşelerine sürükle</string>
+    <string name="do_straighten">Tamam</string>
+    <string name="straighten_done">Sayfa kırpıldı</string>
+
+    <!-- Yazi ve ceviri ekrani -->
     <string name="text_title">Yazı ve Çeviri</string>
     <string name="recognized_label">Belgeden okunan yazı</string>
     <string name="recognized_hint">Belgeden okunan yazı burada görünecek…</string>
@@ -59,12 +74,12 @@
     <string name="translation_hint">Çeviri burada görünecek…</string>
     <string name="copy_translation">Çeviriyi kopyala</string>
     <string name="ocr_running">Yazı okunuyor…</string>
-    <string name="ocr_done">Yazı okundu ✓</string>
+    <string name="ocr_done">Yazı okundu</string>
     <string name="ocr_empty">Belgede okunabilir yazı bulunamadı</string>
     <string name="detecting_language">Dil algılanıyor…</string>
-    <string name="model_downloading">Çeviri modeli indiriliyor… (ilk seferde internet gerekir)</string>
-    <string name="model_download_failed">Çeviri modeli indirilemedi (internet gerekli)</string>
-    <string name="translate_done">Çeviri hazır ✓</string>
+    <string name="model_downloading">Çeviri paketi indiriliyor… (ilk seferde internet gerekir)</string>
+    <string name="model_download_failed">Çeviri paketi indirilemedi (internet gerekli)</string>
+    <string name="translate_done">Çeviri hazır</string>
     <string name="translate_failed">Çeviri yapılamadı</string>
     <string name="no_text_to_translate">Çevrilecek yazı yok</string>
     <string name="copied">Panoya kopyalandı</string>

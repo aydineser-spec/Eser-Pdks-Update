@@ -6,5 +6,8 @@
     <color name="bg">#F1F5FB</color>
     <color name="text_primary">#1A1A1A</color>
     <color name="text_secondary">#5A6675</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="divider">#D5DEEA</color>
+    <color name="danger">#C62828</color>
     <color name="ic_launcher_background">#1565C0</color>
 </resources>

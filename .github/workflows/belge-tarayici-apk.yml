@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "claude/document-scanner-apk-u6v5oc"
+      - "ccr-d75fa510-99mjqh"
     paths:
       - "belge-tarayici/**"
       - ".github/workflows/belge-tarayici-apk.yml"

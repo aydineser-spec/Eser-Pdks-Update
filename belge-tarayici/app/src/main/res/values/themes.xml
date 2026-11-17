@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.BelgeTarayici" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Acik tema sabit: renkler acik zemine gore secildi (gece modunda okunmaz olmasin) -->
+    <style name="Theme.BelgeTarayici" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorSecondary">@color/accent</item>
         <item name="android:statusBarColor">@color/primary_dark</item>

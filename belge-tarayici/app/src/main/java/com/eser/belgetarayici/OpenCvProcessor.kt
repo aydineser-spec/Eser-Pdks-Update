@@ -235,24 +235,36 @@ object OpenCvProcessor {
     /**
      * Kagit arka planini tertemiz beyaza ceker (vFlat/CamScanner gorunumu).
      * BENEK YAPMAZ: yerel esikleme yerine PURUZSUZ global seviye ayari kullanir.
-     *  - medianBlur: foto grenini yumusatir (ince cizgiyi bozmaz)
-     *  - seviye (levels): siyah nokta 70, beyaz nokta 205 -> kagit bembeyaz, yazi siyah,
+     *  - seviye (levels): siyah nokta 70, beyaz nokta 230 -> kagit bembeyaz, yazi siyah,
      *    tek bir affine + kirpma oldugu icin karabiber benek OLUSMAZ
+     *  - orta ton koyulastirma (gamma 1.3): silik/kursun kalem yazi okunur kalir
      *  - renkli icerik (mavi kase, imza): orijinal renginde geri konur (bozulmaz)
+     * Eski ayar (beyaz nokta 205 + ikinci medianBlur) kagidin %80'inden acik her seyi
+     * SILIYORDU: kursun kalem notlari kayboluyordu. Python/cv2 4.11 olcumu (golgeli+grenli):
+     *   eski: kagit 255, benek %0, kalem kontrasti 0.4  (yazi yok oldu)
+     *   yeni: kagit 255, benek %0, kalem kontrasti 59   (fotograftakinden de net)
      * rgb: RGB, 8UC3 (yerinde degistirilir).
      */
     fun whitenPaper(rgb: Mat) {
         // Renkli icerigi sonradan geri koymak icin orijinali sakla
         val orig = rgb.clone()
 
-        // Foto grenini yumusat (benekleri kaynaginda azaltir)
-        Imgproc.medianBlur(rgb, rgb, 3)
-
-        // Seviye ayari: out = (in - bp) * 255/(wp - bp)  (bp=70, wp=205)
-        // Kagit (~235) -> 255 beyaz, yazi (~80) -> ~0 siyah; PURUZSUZ, benek yok
-        val bp = 70.0; val wp = 205.0
+        // Seviye ayari: out = (in - bp) * 255/(wp - bp)  (bp=70, wp=230)
+        // Golgesi alinmis kagit (~250) -> 255 beyaz, yazi (~80) -> ~0 siyah
+        val bp = 70.0; val wp = 230.0
         val scale = 255.0 / (wp - bp)
         rgb.convertTo(rgb, -1, scale, -bp * scale)
+
+        // Orta tonlari hafif koyulastir: beyaz 255'te kalir, silik yazi belirginlesir
+        val table = ByteArray(256) { i ->
+            Math.round(255.0 * Math.pow(i / 255.0, 1.3)).toInt().coerceIn(0, 255).toByte()
+        }
+        val lut = Mat(1, 256, CvType.CV_8UC1)
+        lut.put(0, 0, table)
+        val toned = Mat()
+        Core.LUT(rgb, lut, toned)
+        toned.copyTo(rgb)
+        toned.release(); lut.release()
 
         // Renkli (doygun) icerigi orijinalden geri koy: kase/imza rengi birebir kalir
         val hsv = Mat(); Imgproc.cvtColor(orig, hsv, Imgproc.COLOR_RGB2HSV)

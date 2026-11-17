@@ -1,8 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item
-        android:id="@+id/action_settings"
-        android:title="Ayarlar"
-        app:showAsAction="always" />
+    <!-- Sadece sayfa varken gorunur -->
+    <group android:id="@+id/group_pages">
+        <item
+            android:id="@+id/action_new"
+            android:title="@string/menu_new"
+            app:showAsAction="always|withText" />
+        <item
+            android:id="@+id/action_text"
+            android:title="@string/menu_text"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_gallery"
+            android:title="@string/menu_gallery"
+            app:showAsAction="never" />
+    </group>
 </menu>
