@@ -11,9 +11,14 @@
             android:id="@+id/action_text"
             android:title="@string/menu_text"
             app:showAsAction="never" />
-        <item
-            android:id="@+id/action_gallery"
-            android:title="@string/menu_gallery"
-            app:showAsAction="never" />
     </group>
+    <!-- Her zaman (uc nokta menusu) -->
+    <item
+        android:id="@+id/action_gallery_add"
+        android:title="@string/menu_gallery_add"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_google"
+        android:title="@string/menu_google"
+        app:showAsAction="never" />
 </menu>

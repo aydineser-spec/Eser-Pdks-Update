@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -31,6 +32,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.File
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -38,32 +40,44 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Eser Lens ana ekrani (vFlat tarzi sade akis):
- *  1) Uygulama acilinca Google'in belge tarayicisi hemen acilir: belgeyi bulur,
- *     kendisi ceker, kirpar ve TEMIZLER (golge, leke, parmak). Goruntu temizligi
- *     tamamen Google'in motorunda; bu uygulama goruntunun rengine/tonuna DOKUNMAZ.
- *  2) Taranan sayfalar alt alta gorunur; her sayfanin altinda Kirp / Dondur / Sil
- *     (iki sayfalik kitap cekiminde ayrica "Ikiye Bol").
- *  3) Altta: + Sayfa / PDF Kaydet / Paylas.
- * Yapay zeka yok, OpenCV yok, kendi filtremiz yok: sayfayi bozacak katman kalmadi.
+ * Eser Lens ana ekrani (vFlat tarzi):
+ *  1) Uygulama acilinca KENDI kameramiz acilir: telefonun tam cozunurlugunde ceker.
+ *  2) Her cekimde kagidin kenarlari otomatik bulunur ve sayfa duzlestirilir
+ *     (emin degilse fotograf oldugu gibi kalir). Goruntunun rengine dokunulmaz.
+ *  3) Her sayfanin altinda Kirp / Dondur / Sil (kitapta "Ikiye Bol").
+ *     Kirp, ORIJINAL fotografi acar: kesilen kisim kaybolmaz.
+ *  4) Altta: + Sayfa / Kaydet (PDF, JPG, PNG) / Paylas.
+ *  Menu: Galeriden ekle, Google tarayici ile tara, Yazi cikar.
  */
 class MainActivity : AppCompatActivity() {
 
-    /** Bir sayfa = tek JPEG dosyasi (Kirp/Dondur/Bol dogrudan bunu degistirir). */
-    class Page(val file: File) {
-        fun delete() { file.delete() }
+    /**
+     * Bir sayfa.
+     *  file: gosterilen/kaydedilen sayfa
+     *  raw: kamera/galeri fotografinin orijinali (Kirp icin; Google tarayicisinda yok)
+     *  corners: raw uzerindeki koseler (0..1), rotation: sonradan yapilan ceyrek donusler
+     */
+    class Page(
+        val file: File,
+        val raw: File? = null,
+        var corners: FloatArray? = null,
+        var rotation: Int = 0
+    ) {
+        fun delete() { file.delete(); raw?.delete() }
     }
 
     class PageHolder(val b: ItemPageBinding) : RecyclerView.ViewHolder(b.root)
 
     companion object {
-        private const val EDIT_DIM = 4000   // dondurme/bolme sirasinda ust sinir (uzun kenar)
+        private const val EDIT_DIM = 4000   // isleme sirasinda ust sinir (uzun kenar)
         private const val REQ_STORAGE = 42
         private const val PENDING_PDF = 1
-        private const val PENDING_IMAGES = 2
+        private const val PENDING_JPG = 2
+        private const val PENDING_PNG = 3
     }
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
     private lateinit var scannerLauncher: ActivityResultLauncher<IntentSenderRequest>
     private lateinit var galleryLauncher: ActivityResultLauncher<String>
     private lateinit var cropLauncher: ActivityResultLauncher<Intent>
@@ -86,20 +100,34 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Kenar bulucuyu arka planda hazirla
+        worker.execute { EdgeDetector.init() }
+
+        cameraLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { res ->
+            val shots = res.data?.getStringArrayListExtra(CameraActivity.EXTRA_SHOTS)
+            if (res.resultCode == Activity.RESULT_OK && !shots.isNullOrEmpty()) {
+                processPhotos(shots.map { File(it) })
+            } else if (res.data?.getBooleanExtra(CameraActivity.EXTRA_FALLBACK, false) == true) {
+                startGoogleScan(addMode)
+            }
+        }
+
         scannerLauncher = registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
         ) { res ->
             if (res.resultCode == Activity.RESULT_OK) {
                 val result = GmsDocumentScanningResult.fromActivityResultIntent(res.data)
                 val uris = result?.pages?.map { it.imageUri }.orEmpty()
-                if (uris.isNotEmpty()) addPages(uris) else toast(getString(R.string.error_no_result))
+                if (uris.isNotEmpty()) addScannedPages(uris) else toast(getString(R.string.error_no_result))
             }
         }
 
         galleryLauncher = registerForActivityResult(
             ActivityResultContracts.GetMultipleContents()
         ) { uris ->
-            if (!uris.isNullOrEmpty()) addPages(uris)
+            if (!uris.isNullOrEmpty()) importGallery(uris)
         }
 
         cropLauncher = registerForActivityResult(
@@ -108,6 +136,9 @@ class MainActivity : AppCompatActivity() {
             val i = cropIndex
             cropIndex = -1
             if (res.resultCode == Activity.RESULT_OK && i in pages.indices) {
+                val p = pages[i]
+                val c = res.data?.getFloatArrayExtra(CropActivity.EXTRA_CORNERS)
+                if (p.raw != null && c != null) p.corners = c
                 adapter.notifyItemChanged(i)
                 unsaved = true
             }
@@ -118,7 +149,8 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.action_new -> { askNewScan(); true }
                 R.id.action_text -> { openTextScreen(); true }
-                R.id.action_gallery -> { saveImages(); true }
+                R.id.action_gallery_add -> { addMode = pages.isNotEmpty(); galleryLauncher.launch("image/*"); true }
+                R.id.action_google -> { startGoogleScan(pages.isNotEmpty()); true }
                 else -> false
             }
         }
@@ -128,7 +160,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnScanBig.setOnClickListener { startScan(add = false) }
         binding.btnAddPage.setOnClickListener { startScan(add = true) }
-        binding.btnSavePdf.setOnClickListener { savePdf() }
+        binding.btnSave.setOnClickListener { askSave() }
         binding.btnShare.setOnClickListener { sharePdf() }
 
         // Geri tusu: kaydedilmemis sayfa varsa once sor
@@ -158,15 +190,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ----------------------------------------------------------------------
-    // Tarama (goruntu temizligi tamamen Google'in tarayicisinda)
+    // Cekim
     // ----------------------------------------------------------------------
+    /** Kendi kameramiz (tam cozunurluk). */
     private fun startScan(add: Boolean) {
+        addMode = add
+        cameraLauncher.launch(Intent(this, CameraActivity::class.java))
+    }
+
+    /** Yedek: Google'in tarayicisi (dusuk cozunurluk ama otomatik cekim + temizlik). */
+    private fun startGoogleScan(add: Boolean) {
         addMode = add
         val options = GmsDocumentScannerOptions.Builder()
             .setGalleryImportAllowed(true)
             .setPageLimit(30)
             .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-            // FULL: otomatik cekim + kenar bulma + filtreler + leke/parmak silme
             .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
             .build()
 
@@ -176,7 +214,6 @@ class MainActivity : AppCompatActivity() {
                 scannerLauncher.launch(IntentSenderRequest.Builder(sender).build())
             }
             .addOnFailureListener { e ->
-                // Kamera tarayici yoksa (Play Hizmetleri sorunu vb.) galeriden secmeyi oner
                 MaterialAlertDialogBuilder(this)
                     .setTitle(R.string.scan_failed_title)
                     .setMessage(getString(R.string.scan_failed_msg, e.localizedMessage ?: ""))
@@ -188,15 +225,65 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    /** Taranan/secilen gorselleri sayfa yap. Goruntuye HICBIR isleme yapilmaz. */
-    private fun addPages(uris: List<Uri>) {
+    /** Kamera fotograflari -> kenari bul, duzlestir, sayfa yap. */
+    private fun processPhotos(raws: List<File>) {
+        val replace = !addMode
+        addMode = false
+        runTask(getString(R.string.processing), { buildPhotoPages(raws) }) { added ->
+            showAddedPages(added, replace)
+        }
+    }
+
+    /** Galeriden secilen fotograflar: kamera fotografi gibi islenir (kenar bulma dahil). */
+    private fun importGallery(uris: List<Uri>) {
+        val replace = !addMode
+        addMode = false
+        runTask(getString(R.string.processing), {
+            val raws = ArrayList<File>()
+            for (uri in uris) {
+                val raw = File(outputDir, "galeri_${System.nanoTime()}.jpg")
+                if (copyUri(uri, raw)) raws.add(raw) else raw.delete()
+            }
+            buildPhotoPages(raws)
+        }) { added -> showAddedPages(added, replace) }
+    }
+
+    /** Arka planda calisir. Her fotograf icin: koseleri bul -> duzlestir -> sayfa. */
+    private fun buildPhotoPages(raws: List<File>): List<Page> {
+        val added = ArrayList<Page>()
+        raws.forEachIndexed { i, raw ->
+            if (raws.size > 1) progress(getString(R.string.progress, i + 1, raws.size))
+            try {
+                val full = ImageUtils.decodeScaled(raw, EDIT_DIM)
+                // Emin degilse null -> tum fotograf (hic kirpma yok)
+                val corners = EdgeDetector.detect(full) ?: ImageUtils.FULL_FRAME.copyOf()
+                val page = ImageUtils.warp(full, corners)
+                full.recycle()
+                val p = newPage(raw, corners)
+                ImageUtils.writeJpeg(page, p.file, 92)
+                page.recycle()
+                added.add(p)
+            } catch (e: Throwable) {
+                raw.delete()
+            }
+        }
+        return added
+    }
+
+    /** Google tarayicisindan gelen (zaten kirpilmis) sayfalar: oldugu gibi. */
+    private fun addScannedPages(uris: List<Uri>) {
         val replace = !addMode
         addMode = false
         runTask(getString(R.string.processing), {
             val added = ArrayList<Page>()
             for (uri in uris) {
                 val p = newPage()
-                if (copyUri(uri, p.file)) added.add(p) else p.delete()
+                if (copyUri(uri, p.file)) {
+                    ImageUtils.normalizeOrientation(p.file)
+                    added.add(p)
+                } else {
+                    p.delete()
+                }
             }
             added
         }) { added -> showAddedPages(added, replace) }
@@ -219,9 +306,9 @@ class MainActivity : AppCompatActivity() {
         binding.pageList.scrollToPosition(firstNew)
     }
 
-    private fun newPage(): Page {
+    private fun newPage(raw: File? = null, corners: FloatArray? = null): Page {
         val n = fileCounter.incrementAndGet()
-        return Page(File(outputDir, "sayfa$n.jpg"))
+        return Page(File(outputDir, "sayfa$n.jpg"), raw, corners)
     }
 
     // ----------------------------------------------------------------------
@@ -231,7 +318,16 @@ class MainActivity : AppCompatActivity() {
         val p = pages.getOrNull(index) ?: return
         cropIndex = index
         val intent = Intent(this, CropActivity::class.java)
-        intent.putExtra(CropActivity.EXTRA_PATH, p.file.absolutePath)
+        val raw = p.raw
+        if (raw != null && raw.exists()) {
+            // Orijinal fotograf + mevcut koseler: kesilen kisim geri alinabilir
+            intent.putExtra(CropActivity.EXTRA_PATH, raw.absolutePath)
+            intent.putExtra(CropActivity.EXTRA_OUT, p.file.absolutePath)
+            intent.putExtra(CropActivity.EXTRA_CORNERS, p.corners ?: ImageUtils.FULL_FRAME)
+            intent.putExtra(CropActivity.EXTRA_ROTATION, p.rotation)
+        } else {
+            intent.putExtra(CropActivity.EXTRA_PATH, p.file.absolutePath)
+        }
         cropLauncher.launch(intent)
     }
 
@@ -240,10 +336,11 @@ class MainActivity : AppCompatActivity() {
         runTask(getString(R.string.rotating), {
             val bmp = ImageUtils.decodeScaled(p.file, EDIT_DIM)
             val rot = ImageUtils.rotate90(bmp)
-            ImageUtils.writeJpeg(rot, p.file, 95)
+            ImageUtils.writeJpeg(rot, p.file, 92)
             if (rot !== bmp) rot.recycle()
             bmp.recycle()
         }) {
+            p.rotation = (p.rotation + 1) % 4
             adapter.notifyItemChanged(index)
             unsaved = true
         }
@@ -259,8 +356,8 @@ class MainActivity : AppCompatActivity() {
             val right = Bitmap.createBitmap(bmp, cut, 0, bmp.width - cut, bmp.height)
             val pl = newPage()
             val pr = newPage()
-            ImageUtils.writeJpeg(left, pl.file, 95)
-            ImageUtils.writeJpeg(right, pr.file, 95)
+            ImageUtils.writeJpeg(left, pl.file, 92)
+            ImageUtils.writeJpeg(right, pr.file, 92)
             left.recycle(); right.recycle(); bmp.recycle()
             Pair(pl, pr)
         }) { (pl, pr) ->
@@ -311,8 +408,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ----------------------------------------------------------------------
-    // PDF / kaydet / paylas
+    // Kaydet (PDF / JPG / PNG) ve paylas
     // ----------------------------------------------------------------------
+    private fun askSave() {
+        if (pages.isEmpty()) return
+        val items = arrayOf(
+            getString(R.string.save_opt_pdf),
+            getString(R.string.save_opt_jpg),
+            getString(R.string.save_opt_png)
+        )
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.save_title)
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> savePdf()
+                    1 -> saveImages(png = false)
+                    2 -> saveImages(png = true)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun buildPdf(files: List<File>): File {
         val stamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
         val out = File(outputDir, "EserLens_$stamp.pdf")
@@ -349,15 +466,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveImages() {
+    private fun saveImages(png: Boolean) {
         if (pages.isEmpty()) return
-        if (needsLegacyPerm()) { pendingAction = PENDING_IMAGES; requestLegacyPerm(); return }
+        if (needsLegacyPerm()) {
+            pendingAction = if (png) PENDING_PNG else PENDING_JPG
+            requestLegacyPerm()
+            return
+        }
         val files = pages.map { it.file }
         runTask(getString(R.string.saving), {
             var ok = 0
             var err: String? = null
-            files.forEachIndexed { i, f ->
-                val e = saveImageToGallery(f, i + 1)
+            for ((i, f) in files.withIndex()) {
+                if (files.size > 1) progress(getString(R.string.saving_progress, i + 1, files.size))
+                val e = saveImageToGallery(f, i + 1, png)
                 if (e == null) ok++ else err = e
             }
             Pair(ok, err)
@@ -374,22 +496,35 @@ class MainActivity : AppCompatActivity() {
     private fun stampName(): String =
         SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
 
+    /** Sayfayi akisa yaz: JPG oldugu gibi kopyalanir, PNG kayipsiz donusturulur. */
+    private fun writeImage(file: File, out: OutputStream, png: Boolean) {
+        if (png) {
+            val bmp = BitmapFactory.decodeFile(file.absolutePath)
+                ?: throw IllegalStateException("Sayfa okunamadi")
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            bmp.recycle()
+        } else {
+            file.inputStream().use { it.copyTo(out) }
+        }
+    }
+
     /** Hata yoksa null, varsa sebep doner. */
-    private fun saveImageToGallery(file: File, no: Int): String? {
+    private fun saveImageToGallery(file: File, no: Int, png: Boolean): String? {
         return try {
-            val name = "EserLens_${stampName()}_$no.jpg"
+            val ext = if (png) "png" else "jpg"
+            val mime = if (png) "image/png" else "image/jpeg"
+            val name = "EserLens_${stampName()}_$no.$ext"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val cv = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.MIME_TYPE, mime)
                     put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/EserLens")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
                 val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv)
                     ?: return "insert=null"
-                contentResolver.openOutputStream(uri)?.use { out ->
-                    file.inputStream().use { it.copyTo(out) }
-                } ?: return "stream=null"
+                contentResolver.openOutputStream(uri)?.use { out -> writeImage(file, out, png) }
+                    ?: return "stream=null"
                 cv.clear(); cv.put(MediaStore.Images.Media.IS_PENDING, 0)
                 contentResolver.update(uri, cv, null, null)
             } else {
@@ -398,9 +533,9 @@ class MainActivity : AppCompatActivity() {
                     "EserLens"
                 ).apply { mkdirs() }
                 val dest = File(dir, name)
-                file.inputStream().use { input -> dest.outputStream().use { input.copyTo(it) } }
+                dest.outputStream().use { out -> writeImage(file, out, png) }
                 // Galeride hemen gorunsun
-                MediaScannerConnection.scanFile(this, arrayOf(dest.absolutePath), arrayOf("image/jpeg"), null)
+                MediaScannerConnection.scanFile(this, arrayOf(dest.absolutePath), arrayOf(mime), null)
             }
             null
         } catch (e: Throwable) {
@@ -461,7 +596,8 @@ class MainActivity : AppCompatActivity() {
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             when (action) {
                 PENDING_PDF -> savePdf()
-                PENDING_IMAGES -> saveImages()
+                PENDING_JPG -> saveImages(png = false)
+                PENDING_PNG -> saveImages(png = true)
             }
         } else {
             toast(getString(R.string.permission_denied))
@@ -525,6 +661,11 @@ class MainActivity : AppCompatActivity() {
                     .onFailure { toast(getString(R.string.processing_failed)) }
             }
         }
+    }
+
+    /** Arka plandan ilerleme yazisini guncelle ("Hazirlaniyor… 3 / 10"). */
+    private fun progress(msg: String) {
+        runOnUiThread { binding.procText.text = msg }
     }
 
     private fun setBusy(busy: Boolean, msg: String) {

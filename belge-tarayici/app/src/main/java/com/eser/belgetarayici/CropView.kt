@@ -41,9 +41,25 @@ class CropView(context: Context, attrs: AttributeSet? = null) : View(context, at
         color = Color.WHITE; style = Paint.Style.FILL
     }
 
-    fun setBitmap(bmp: Bitmap) {
+    // Baslangic koseleri (0..1 normalize, TL,TR,BR,BL); null = kenardan %2 iceri
+    private var initialNorm: FloatArray? = null
+
+    fun setBitmap(bmp: Bitmap, initialCorners: FloatArray? = null) {
         bitmap = bmp
+        initialNorm = initialCorners?.takeIf { it.size == 8 }
         post { computeRect(); initCorners(); invalidate() }
+    }
+
+    /** Koseler 0..1 normalize: [x0,y0, x1,y1, x2,y2, x3,y3] (TL,TR,BR,BL). */
+    fun cornersNormalized(): FloatArray {
+        val r = drawRect
+        val out = FloatArray(8)
+        if (r.width() <= 0f || r.height() <= 0f) return ImageUtils.FULL_FRAME.copyOf()
+        for (i in 0..3) {
+            out[i * 2] = ((corners[i].x - r.left) / r.width()).coerceIn(0f, 1f)
+            out[i * 2 + 1] = ((corners[i].y - r.top) / r.height()).coerceIn(0f, 1f)
+        }
+        return out
     }
 
     private fun computeRect() {
@@ -57,8 +73,16 @@ class CropView(context: Context, attrs: AttributeSet? = null) : View(context, at
     }
 
     private fun initCorners() {
-        // Kadrajin tamamini kapsa (kullanici tum A4'u gorsun), cok kucuk pay
         val r = drawRect
+        val n = initialNorm
+        if (n != null) {
+            // Otomatik bulunan (ya da daha once secilen) koselerden basla
+            for (i in 0..3) {
+                corners[i].set(r.left + n[i * 2] * r.width(), r.top + n[i * 2 + 1] * r.height())
+            }
+            return
+        }
+        // Kadrajin tamamini kapsa (kullanici tum A4'u gorsun), cok kucuk pay
         val ix = r.width() * 0.02f; val iy = r.height() * 0.02f
         corners[0].set(r.left + ix, r.top + iy)
         corners[1].set(r.right - ix, r.top + iy)

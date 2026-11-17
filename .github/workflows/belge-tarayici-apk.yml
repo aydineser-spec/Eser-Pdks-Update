@@ -80,12 +80,12 @@ jobs:
           Eski Eser Lens'i silmeden üstüne kurulur.
 
           **Bu sürümde:**
-          - Yapay zekâ, OpenCV ve uygulamanın kendi filtreleri tamamen kaldırıldı (sayfaları bozuyordu)
-          - Görüntü temizliğini sadece Google'ın tarayıcısı yapıyor; uygulama sayfanın rengine/tonuna dokunmuyor
-          - Uygulama açılınca kamera hemen açılır, belgeyi bulunca kendisi çeker
-          - Her sayfanın altında: Kırp / Döndür / Sil (kitap çekiminde İkiye Böl)
-          - Altta tek sıra: + Sayfa / PDF Kaydet / Paylaş
-          - Kırp ve Döndür sadece o sayfaya uygulanıyor
+          - Kendi kameramız: telefonun tam çözünürlüğünde çeker (Google tarayıcısı sayfayı ~1 MP'ye düşürüyordu, küçük yazılar bulanıktı)
+          - Çektikten sonra kâğıdın kenarları otomatik bulunur, sayfa düzleştirilir (emin değilse fotoğraf olduğu gibi kalır)
+          - Kırp orijinal fotoğrafı açar: kesilen kısım kaybolmaz, köşeler istediğin kadar düzeltilir
+          - Kaydet: PDF, JPG ya da PNG
+          - Galeriden ekle ve Google tarayıcı ile tara: sağ üstteki menüde
+          - Görüntünün rengine/tonuna dokunan filtre yok, yapay zekâ yok
 
           Sürüm $VER · $DATE
           EOF

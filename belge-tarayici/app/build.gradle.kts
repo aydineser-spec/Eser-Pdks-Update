@@ -58,7 +58,7 @@ android {
         viewBinding = true
     }
 
-    // ML Kit kutuphaneleri ayni native kutuphaneyi (libc++_shared.so) getirebilir;
+    // OpenCV ve ML Kit ayni native kutuphaneyi (libc++_shared.so) getirebilir;
     // cakismayi onle
     packaging {
         jniLibs {
@@ -83,6 +83,14 @@ dependencies {
     implementation("com.google.mlkit:language-id:17.0.6")
     // Cihazda (cevrimdisi) ceviri - 50+ dil.
     implementation("com.google.mlkit:translate:17.0.3")
-    // OpenCV KALDIRILDI: goruntu temizligi tamamen Google'in tarayicisinda.
-    // Kendi filtrelerimiz (yapay zeka, Net Belge) sayfalari bozuyordu.
+    // Kendi kameramiz: telefonun tam cozunurlugunde cekim (Google tarayicisi ~1 MP veriyordu)
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+    // Fotografin yon bilgisi (yan cikmasin)
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    // OpenCV: SADECE kagidin kenarlarini bulmak icin (EdgeDetector).
+    // Goruntunun rengine/tonuna dokunan hicbir filtre yok.
+    implementation("org.opencv:opencv:4.11.0")
 }

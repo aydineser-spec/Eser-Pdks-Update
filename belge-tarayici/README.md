@@ -1,28 +1,34 @@
 # Eser Lens (Android belge tarayıcı)
 
-vFlat tarzı sade belge tarayıcı. Yapay zekâ, OpenCV ya da uygulamanın kendi
-filtresi yok. Görüntü temizliğini yalnızca Google'ın belge tarayıcısı
-(Google ML Kit, tam mod) yapar; uygulama sayfanın rengine ve tonuna dokunmaz.
+vFlat tarzı sade belge tarayıcı. Kendi kamerasıyla telefonun tam
+çözünürlüğünde çeker, kâğıdın kenarlarını bulup sayfayı düzleştirir.
+Yapay zekâ yok; görüntünün rengine/tonuna dokunan filtre yok.
+(OpenCV yalnızca kâğıdın köşelerini bulmak için kullanılır.)
 
 ## Nasıl kullanılır
 
-1. **Uygulamayı aç:** Kamera kendiliğinden açılır. Belgeyi çerçeveye al;
-   kenarları bulunca kendisi çeker. İstersen deklanşöre kendin de basabilirsin.
-   Çektikten sonraki ekranda görüntüyü temizleyebilir, renk ayarını seçebilirsin.
-   Galerideki bir fotoğraf için kamera ekranındaki resim simgesine bas.
+1. **Uygulamayı aç:** Kamera kendiliğinden açılır. Belgeyi çerçeveye al ve
+   büyük beyaz düğmeyle çek; art arda birden çok sayfa çekebilirsin. Yakın
+   çekimde ekrana dokunarak netle. Bitince **Bitti**'ye bas. Kenarlar otomatik
+   bulunur ve sayfa düzleştirilir; emin olmadığı fotoğrafı olduğu gibi bırakır.
+   Galeriden fotoğraf eklemek ya da Google'ın tarayıcısını kullanmak için
+   sağ üstteki menüyü aç.
 2. **Sayfaları kontrol et:** Her sayfanın altında kendi düğmeleri var:
-   - **Kırp:** Yeşil köşeleri belgenin köşelerine sürükle.
+   - **Kırp:** Orijinal fotoğraf açılır, yeşil köşeler otomatik bulunan yerde
+     başlar; sürükleyip **Tamam**'a bas. Kesilen kısım kaybolmaz, tekrar
+     kırpabilirsin.
    - **Döndür:** Sayfayı 90° çevirir.
    - **İkiye Böl:** Yalnızca geniş (iki sayfalık kitap) çekimlerde görünür.
      Sayfayı ortadaki cilt çizgisinden ikiye ayırır.
    - **Sil:** Sormadan silmez.
-3. **Kaydet (alt sıra):**
-   - **+ Sayfa:** Sona yeni sayfa ekler.
-   - **PDF Kaydet:** İndirilenler › EserLens klasörüne kaydeder.
-   - **Paylaş:** WhatsApp, e-posta vb. ile gönderir.
+3. **Alt sıra:**
+   - **+ Sayfa:** Kamerayı açar, yeni sayfaları sona ekler.
+   - **Kaydet:** PDF (İndirilenler › EserLens), JPG ya da PNG (Galeri › EserLens).
+   - **Paylaş:** PDF'i WhatsApp, e-posta vb. ile gönderir.
 
 Üstteki **Yeni** yeni bir tarama başlatır. Üç nokta menüsünde
-**Yazıyı çıkar** (OCR ve çeviri) ile **Resim olarak kaydet** (JPG) bulunur.
+**Yazıyı çıkar** (OCR ve çeviri), **Galeriden ekle** ve
+**Google tarayıcı ile tara** bulunur.
 
 ## Kurulabilir APK'yı nereden indiririm?
 

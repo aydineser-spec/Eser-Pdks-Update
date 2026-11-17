@@ -4,18 +4,36 @@
 
     <!-- Bos ekran -->
     <string name="empty_title">Belge taramaya hazır</string>
-    <string name="empty_subtitle">Kamera açılınca belgeyi çerçeveye al. Belgeyi bulunca kendisi çeker.\n\nÇektikten sonraki ekranda görüntüyü temizleyebilir, renk ayarını seçebilirsin.\n\nGalerideki bir fotoğrafı taramak için kamera ekranındaki resim simgesine bas.</string>
+    <string name="empty_subtitle">Belgeyi kameraya göster ve çek. Kenarlarını kendisi bulup sayfayı düzleştirir.\n\nGaleriden fotoğraf eklemek için sağ üstteki menüyü kullan.</string>
     <string name="scan_big">Belge Tara</string>
+
+    <!-- Kamera -->
+    <string name="camera_hint">Belgeyi çerçeveye al ve çek. Yakınsa ekrana dokunup netle.</string>
+    <string name="flash_off">Flaş: Kapalı</string>
+    <string name="flash_on">Flaş: Açık</string>
+    <string name="close">Kapat</string>
+    <string name="done_count">Bitti (%1$d)</string>
+    <string name="shutter">Çek</string>
+    <string name="capture_failed">Çekilemedi, tekrar dene</string>
+    <string name="camera_failed">Kamera açılamadı, Google tarayıcısı açılıyor</string>
+    <string name="camera_permission_denied">Kamera izni verilmedi, Google tarayıcısı açılıyor</string>
 
     <!-- Alt dugmeler -->
     <string name="add_page">+ Sayfa</string>
-    <string name="save_pdf">PDF Kaydet</string>
+    <string name="save">Kaydet</string>
     <string name="share">Paylaş</string>
+
+    <!-- Kaydet secenekleri -->
+    <string name="save_title">Nasıl kaydedilsin?</string>
+    <string name="save_opt_pdf">PDF  (İndirilenler › EserLens)</string>
+    <string name="save_opt_jpg">Resim JPG  (Galeri › EserLens)</string>
+    <string name="save_opt_png">Resim PNG  (Galeri › EserLens)</string>
 
     <!-- Ust menu -->
     <string name="menu_new">Yeni</string>
     <string name="menu_text">Yazıyı çıkar</string>
-    <string name="menu_gallery">Resim olarak kaydet</string>
+    <string name="menu_gallery_add">Galeriden ekle</string>
+    <string name="menu_google">Google tarayıcı ile tara</string>
 
     <!-- Sayfa karti -->
     <string name="page_count">%1$d sayfa</string>
@@ -27,6 +45,9 @@
 
     <!-- Islem mesajlari -->
     <string name="processing">Hazırlanıyor…</string>
+    <string name="progress">Hazırlanıyor… %1$d / %2$d</string>
+    <string name="saving_progress">Kaydediliyor… %1$d / %2$d</string>
+    <string name="cropping">Kırpılıyor…</string>
     <string name="rotating">Döndürülüyor…</string>
     <string name="splitting">Sayfa ikiye bölünüyor…</string>
     <string name="making_pdf">PDF hazırlanıyor…</string>
