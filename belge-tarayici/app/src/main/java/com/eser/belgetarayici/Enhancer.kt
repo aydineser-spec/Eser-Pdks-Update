@@ -19,26 +19,23 @@ import kotlin.math.min
  *    golge silinir, kagit beyazlar, yazi koyulasir; kase/imza rengi korunur.
  *    (Daha once test edilen guvenli "Net Belge": benek yok, fotograf alanina dokunmaz.)
  *
- *  DIGER (kutu, dergi, fotograf, ekran):
- *    1) Ton araligi: siyah koyu, beyaz beyaz (yuzdelik germe, kazanc en fazla 1.6)
- *    2) Netlik: orta olcekli ayrinti guclendirilir (bant gecisli: ince kumlanma BUYUMEZ)
- *    3) Keskinlik: sadece goruntunun kendi kumlanmasinin 4 kati ustundeki kenarlar
- *    4) Renk doygunlugu hafif kisilir (germe zaten canlandiriyor)
- *  Olcum (Lexar kutusu, vFlat hedef / bizim ham / bizim yeni):
- *    siyah %1: 17 / 44 / 8   orta: 105 / 122 / 112   doygunluk: 157 / 131 / 164
- *    netlik: 48 / 17 / 40.  Karanlik TV ekraninda kumlanma 11 -> 15 (eski CLAHE: 122).
+ *  DIGER (kutu, dergi, fotograf, ekran): SADECE TON
+ *    Siyah koyu, beyaz beyaz, orta ton hafif koyu (yuzdelik germe, kazanc en fazla 1.6,
+ *    gamma 1.2) + renk hafif kisilir. Tum resme ayni tablo: hale/sisme/kumlanma yapamaz.
+ *  Olcum (Lexar kutusu, vFlat / bizim ham / bizim yeni):
+ *    siyah %1: 17 / 44 / 15   orta: 105 / 122 / 112   beyaz %99: 255 / 203 / 244.
+ *    Karanlik TV ekraninda kumlanma 11 -> 15 (sadece aydinlatmadan).
+ *  NOT: 1.0.51'deki netlik+keskinlik buyuk cekimde hale yapti, kaldirildi.
  *
  * Hata olursa ya da OpenCV yoksa goruntu OLDUGU GIBI dondurulur.
  */
 object Enhancer {
 
-    // Diger (fotograf/kutu) yolu ayarlari
+    // Diger (fotograf/kutu) yolu ayarlari: sadece ton (yerel islem yok)
     private const val LO_PCT = 0.2
     private const val HI_PCT = 98.5
     private const val MAX_GAIN = 1.6
     private const val GAMMA = 1.2
-    private const val CLARITY = 2.0
-    private const val SHARP = 2.5
     private const val SAT = 0.9
 
     // Belge yolu
@@ -64,11 +61,17 @@ object Enhancer {
     // ======================================================================
     // DIGER: kutu, dergi, fotograf, ekran (vFlat gorunumu)
     // ======================================================================
+    /**
+     * SADECE TON: tum resme ayni tablo (siyah koyu, beyaz beyaz, orta ton hafif koyu)
+     * + rengi hafif kis. Yerel islem YOK -> hale, sisme, kumlanma olamaz.
+     * (1.0.51'deki "netlik + keskinlik" buyuk cekimde koyu alanlarin etrafinda beyaz
+     * hale ve sismis yazi yapti; tamamen kaldirildi. Netlik yuksek cozunurlukten gelmeli.)
+     */
     private fun photoLook(rgb: Mat): Mat {
         val w = rgb.cols(); val h = rgb.rows()
         val longEdge = max(w, h)
 
-        // 1) Ton araligi (kucuk kopyanin parlaklik yuzdeliklerinden)
+        // Ton araligi (kucuk kopyanin parlaklik yuzdeliklerinden)
         val small = Mat()
         Imgproc.resize(
             rgb, small,
@@ -77,38 +80,9 @@ object Enhancer {
         )
         val sg = Mat(); Imgproc.cvtColor(small, sg, Imgproc.COLOR_RGB2GRAY); small.release()
         val lut = levelsLut(sg); sg.release()
-        val toned = Mat(); Core.LUT(rgb, lut, toned); lut.release()
+        val out = Mat(); Core.LUT(rgb, lut, out); lut.release()
 
-        // 2) Netlik + 3) keskinlik: sadece parlaklik (Lab L) kanalinda, renge dokunmaz
-        val lab = Mat(); Imgproc.cvtColor(toned, lab, Imgproc.COLOR_RGB2Lab); toned.release()
-        val ch = ArrayList<Mat>(); Core.split(lab, ch); lab.release()
-        val l = Mat(); ch[0].convertTo(l, CvType.CV_32F)
-
-        // bant gecisli netlik: (orta olcek - genis olcek); ince kumlanma buyutulmez
-        val mid = Mat(); Imgproc.GaussianBlur(l, mid, Size(0.0, 0.0), max(1.5, longEdge / 700.0))
-        val big = Mat(); Imgproc.GaussianBlur(l, big, Size(0.0, 0.0), max(4.0, longEdge / 100.0))
-        Core.subtract(mid, big, mid); big.release()
-        Core.scaleAdd(mid, CLARITY, l, l); mid.release()
-
-        // esikli keskinlik
-        val s1 = (longEdge / 1600.0).coerceIn(1.0, 2.5)
-        val d = Mat(); Imgproc.GaussianBlur(l, d, Size(0.0, 0.0), s1)
-        Core.subtract(l, d, d)                                  // d = L - bulanik(L)
-        val absd = Mat(); Core.absdiff(d, Scalar(0.0), absd)
-        val noise = 1.4826 * sampledMedian(absd) + 0.5
-        val t = 4.0 * noise
-        Core.subtract(absd, Scalar(t), absd)                     // m = clip((|d| - t) / t, 0, 1)
-        Core.multiply(absd, Scalar(1.0 / t), absd)
-        Core.min(absd, Scalar(1.0), absd)
-        Core.max(absd, Scalar(0.0), absd)
-        Core.multiply(d, absd, d); absd.release()
-        Core.scaleAdd(d, SHARP, l, l); d.release()
-
-        l.convertTo(ch[0], CvType.CV_8U); l.release()            // yuvarlar + 0..255
-        val lab2 = Mat(); Core.merge(ch, lab2); ch.forEach { it.release() }
-        val out = Mat(); Imgproc.cvtColor(lab2, out, Imgproc.COLOR_Lab2RGB); lab2.release()
-
-        // 4) Renk doygunlugu
+        // Renk doygunlugu (germe zaten canlandiriyor; hafif kis)
         val hsv = Mat(); Imgproc.cvtColor(out, hsv, Imgproc.COLOR_RGB2HSV)
         val hs = ArrayList<Mat>(); Core.split(hsv, hs)
         hs[1].convertTo(hs[1], -1, SAT, 0.0)
@@ -140,20 +114,6 @@ object Enhancer {
         }
         val lut = Mat(1, 256, CvType.CV_8UC1); lut.put(0, 0, table)
         return lut
-    }
-
-    /** Tek kanal float'in medyani (her 4. satir/sutundan ornekleyerek; hizli). */
-    private fun sampledMedian(m: Mat): Double {
-        val sub = Mat()
-        Imgproc.resize(
-            m, sub, Size(max(1, m.cols() / 4).toDouble(), max(1, m.rows() / 4).toDouble()),
-            0.0, 0.0, Imgproc.INTER_NEAREST
-        )
-        val n = sub.total().toInt()
-        if (n == 0) { sub.release(); return 0.0 }
-        val arr = FloatArray(n); sub.get(0, 0, arr); sub.release()
-        arr.sort()
-        return if (n % 2 == 1) arr[n / 2].toDouble() else (arr[n / 2 - 1] + arr[n / 2]) / 2.0
     }
 
     // ======================================================================

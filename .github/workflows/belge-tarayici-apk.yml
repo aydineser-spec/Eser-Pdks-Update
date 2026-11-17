@@ -83,8 +83,9 @@ jobs:
           - QR kod tanıma: kamera QR görünce üstte kart çıkar (Aç / Kopyala / Paylaş)
           - Galeri: kamera ekranının sol altında ve boş ekranda "Galeriden Seç"; seçilen fotoğrafın kenarları otomatik bulunur, Kırp ile düzeltilir
           - Kamerada mavi işaretleme: bulunan belge canlı olarak mavi alanla gösterilir
-          - Kamera ekranının üstünde çekim çözünürlüğü yazar (örn. "Çekim: 4000×3000 (12 MP)"); her sayfanın üstünde de kaç MP olduğu
-          - Otomatik iyileştirme (vFlat görünümü): koyu siyah, beyaz beyaz, net yazı, canlı renk; kâğıt belgede gölge silinir ve kâğıt beyazlar. Menüden kapatılabilir
+          - Kamera artık telefonun verebildiği en yüksek çözünürlükte çeker (önceki sürümler ~1,5 MP'ye düşüyordu)
+          - Kamera ekranının üstünde çekim çözünürlüğü yazar; her sayfanın üstünde de kaç MP olduğu
+          - Otomatik iyileştirme sadeleşti: sadece siyah koyu / beyaz beyaz ton ayarı (1.0.51'deki parlama ve şişmiş yazı yapan netlik kaldırıldı); kâğıt belgede gölge silinir ve kâğıt beyazlar. Menüden kapatılabilir
           - Kaydet: PDF / JPG / PNG büyük simgeli kutucuklarla
           - Kendi kameramız: telefonun tam çözünürlüğünde çeker, kenarları otomatik bulur
           - Kırp orijinal fotoğrafı açar: kesilen kısım kaybolmaz

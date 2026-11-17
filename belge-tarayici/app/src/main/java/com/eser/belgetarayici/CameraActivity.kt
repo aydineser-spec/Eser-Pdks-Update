@@ -135,15 +135,12 @@ class CameraActivity : AppCompatActivity() {
                 val previewSelector = ResolutionSelector.Builder()
                     .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
                     .build()
-                // Cekim: ~12 MP'ye en yakin (yazi keskin, cekim hizli, dosya makul)
+                // Cekim: telefonun verebildigi EN YUKSEK cozunurluk.
+                // (1.0.50/51'de "4000x3000'e en yakin" istegi ~1440x1080'e dustu:
+                //  sayfalar 1-2 MP cikti, kucuk yazi bulanikti.)
                 val captureSelector = ResolutionSelector.Builder()
                     .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-                    .setResolutionStrategy(
-                        ResolutionStrategy(
-                            Size(4000, 3000),
-                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER
-                        )
-                    )
+                    .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
                     .build()
                 val preview = Preview.Builder()
                     .setResolutionSelector(previewSelector)
