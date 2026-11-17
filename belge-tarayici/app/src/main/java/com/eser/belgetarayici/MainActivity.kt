@@ -27,6 +27,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.eser.belgetarayici.databinding.ActivityMainBinding
 import com.eser.belgetarayici.databinding.ItemPageBinding
+import com.eser.belgetarayici.databinding.SheetSaveBinding
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -53,23 +55,30 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Bir sayfa.
-     *  file: gosterilen/kaydedilen sayfa
+     *  file: gosterilen/kaydedilen sayfa (otomatik iyilestirme uygulanmis)
+     *  base: iyilestirme ONCESI sayfa (kirp/dondur sonucu); iyilestirme kapatilinca bu gosterilir
      *  raw: kamera/galeri fotografinin orijinali (Kirp icin; Google tarayicisinda yok)
      *  corners: raw uzerindeki koseler (0..1), rotation: sonradan yapilan ceyrek donusler
+     *  enhance: iyilestirilebilir mi (Google tarayicisi zaten iyilestiriyor: false)
      */
     class Page(
         val file: File,
+        val base: File,
         val raw: File? = null,
         var corners: FloatArray? = null,
-        var rotation: Int = 0
+        var rotation: Int = 0,
+        val enhance: Boolean = true
     ) {
-        fun delete() { file.delete(); raw?.delete() }
+        fun delete() { file.delete(); base.delete(); raw?.delete() }
     }
 
     class PageHolder(val b: ItemPageBinding) : RecyclerView.ViewHolder(b.root)
 
     companion object {
         private const val EDIT_DIM = 4000   // isleme sirasinda ust sinir (uzun kenar)
+        private const val ENH_DIM = 3200    // otomatik iyilestirme cozunurlugu (uzun kenar)
+        private const val PREFS = "eserlens"
+        private const val KEY_AUTO = "auto_enhance"
         private const val REQ_STORAGE = 42
         private const val PENDING_PDF = 1
         private const val PENDING_JPG = 2
@@ -88,6 +97,7 @@ class MainActivity : AppCompatActivity() {
     private val fileCounter = AtomicInteger(0)
 
     private var addMode = false      // true: yeni sayfalar sona eklenir, false: yenileri eskilerin yerine
+    @Volatile private var autoEnhance = true
     private var cropIndex = -1
     private var unsaved = false
     private var pendingAction = 0
@@ -102,6 +112,7 @@ class MainActivity : AppCompatActivity() {
 
         // Kenar bulucuyu arka planda hazirla
         worker.execute { EdgeDetector.init() }
+        autoEnhance = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(KEY_AUTO, true)
 
         cameraLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -139,18 +150,23 @@ class MainActivity : AppCompatActivity() {
                 val p = pages[i]
                 val c = res.data?.getFloatArrayExtra(CropActivity.EXTRA_CORNERS)
                 if (p.raw != null && c != null) p.corners = c
-                adapter.notifyItemChanged(i)
-                unsaved = true
+                // Kirp "temel" sayfayi degistirdi: gosterilen hali yeniden uret
+                runTask(getString(R.string.processing), { render(p) }) {
+                    adapter.notifyItemChanged(i)
+                    unsaved = true
+                }
             }
         }
 
         binding.toolbar.inflateMenu(R.menu.main_menu)
+        binding.toolbar.menu.findItem(R.id.action_auto)?.isChecked = autoEnhance
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_new -> { askNewScan(); true }
                 R.id.action_text -> { openTextScreen(); true }
                 R.id.action_gallery_add -> { addMode = pages.isNotEmpty(); galleryLauncher.launch("image/*"); true }
                 R.id.action_google -> { startGoogleScan(pages.isNotEmpty()); true }
+                R.id.action_auto -> { toggleAutoEnhance(item.isChecked.not()); item.isChecked = autoEnhance; true }
                 else -> false
             }
         }
@@ -260,14 +276,48 @@ class MainActivity : AppCompatActivity() {
                 val page = ImageUtils.warp(full, corners)
                 full.recycle()
                 val p = newPage(raw, corners)
-                ImageUtils.writeJpeg(page, p.file, 92)
+                ImageUtils.writeJpeg(page, p.base, 95)
                 page.recycle()
+                render(p)
                 added.add(p)
             } catch (e: Throwable) {
                 raw.delete()
             }
         }
         return added
+    }
+
+    /**
+     * Arka planda calisir: "temel" sayfadan gosterilen sayfayi uretir.
+     * Otomatik iyilestirme aciksa vFlat gorunumu (kagit belgede beyazlatma), kapaliysa aynen.
+     */
+    private fun render(p: Page) {
+        if (p.enhance && autoEnhance) {
+            val src = ImageUtils.decodeScaled(p.base, ENH_DIM)
+            val out = Enhancer.auto(src)
+            ImageUtils.writeJpeg(out, p.file, 92)
+            if (out !== src) out.recycle()
+            src.recycle()
+        } else {
+            p.base.copyTo(p.file, overwrite = true)
+        }
+    }
+
+    /** Menuden "Otomatik iyilestirme" ac/kapat: tum sayfalar yeniden uretilir. */
+    private fun toggleAutoEnhance(on: Boolean) {
+        autoEnhance = on
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_AUTO, on).apply()
+        if (pages.isEmpty()) return
+        val snapshot = pages.toList()
+        runTask(getString(R.string.processing), {
+            snapshot.forEachIndexed { i, p ->
+                if (snapshot.size > 1) progress(getString(R.string.progress, i + 1, snapshot.size))
+                render(p)
+            }
+        }) {
+            adapter.notifyDataSetChanged()
+            unsaved = true
+        }
     }
 
     /** Google tarayicisindan gelen (zaten kirpilmis) sayfalar: oldugu gibi. */
@@ -277,9 +327,11 @@ class MainActivity : AppCompatActivity() {
         runTask(getString(R.string.processing), {
             val added = ArrayList<Page>()
             for (uri in uris) {
-                val p = newPage()
-                if (copyUri(uri, p.file)) {
-                    ImageUtils.normalizeOrientation(p.file)
+                // Google zaten iyilestirdi: ikinci kez dokunma (enhance = false)
+                val p = newPage(enhance = false)
+                if (copyUri(uri, p.base)) {
+                    ImageUtils.normalizeOrientation(p.base)
+                    render(p)
                     added.add(p)
                 } else {
                     p.delete()
@@ -306,9 +358,12 @@ class MainActivity : AppCompatActivity() {
         binding.pageList.scrollToPosition(firstNew)
     }
 
-    private fun newPage(raw: File? = null, corners: FloatArray? = null): Page {
+    private fun newPage(raw: File? = null, corners: FloatArray? = null, enhance: Boolean = true): Page {
         val n = fileCounter.incrementAndGet()
-        return Page(File(outputDir, "sayfa$n.jpg"), raw, corners)
+        return Page(
+            File(outputDir, "sayfa$n.jpg"), File(outputDir, "sayfa${n}_temel.jpg"),
+            raw, corners, 0, enhance
+        )
     }
 
     // ----------------------------------------------------------------------
@@ -322,11 +377,11 @@ class MainActivity : AppCompatActivity() {
         if (raw != null && raw.exists()) {
             // Orijinal fotograf + mevcut koseler: kesilen kisim geri alinabilir
             intent.putExtra(CropActivity.EXTRA_PATH, raw.absolutePath)
-            intent.putExtra(CropActivity.EXTRA_OUT, p.file.absolutePath)
+            intent.putExtra(CropActivity.EXTRA_OUT, p.base.absolutePath)
             intent.putExtra(CropActivity.EXTRA_CORNERS, p.corners ?: ImageUtils.FULL_FRAME)
             intent.putExtra(CropActivity.EXTRA_ROTATION, p.rotation)
         } else {
-            intent.putExtra(CropActivity.EXTRA_PATH, p.file.absolutePath)
+            intent.putExtra(CropActivity.EXTRA_PATH, p.base.absolutePath)
         }
         cropLauncher.launch(intent)
     }
@@ -334,11 +389,12 @@ class MainActivity : AppCompatActivity() {
     private fun rotatePage(index: Int) {
         val p = pages.getOrNull(index) ?: return
         runTask(getString(R.string.rotating), {
-            val bmp = ImageUtils.decodeScaled(p.file, EDIT_DIM)
+            val bmp = ImageUtils.decodeScaled(p.base, EDIT_DIM)
             val rot = ImageUtils.rotate90(bmp)
-            ImageUtils.writeJpeg(rot, p.file, 92)
+            ImageUtils.writeJpeg(rot, p.base, 95)
             if (rot !== bmp) rot.recycle()
             bmp.recycle()
+            render(p)
         }) {
             p.rotation = (p.rotation + 1) % 4
             adapter.notifyItemChanged(index)
@@ -350,15 +406,17 @@ class MainActivity : AppCompatActivity() {
     private fun splitPage(index: Int) {
         val p = pages.getOrNull(index) ?: return
         runTask(getString(R.string.splitting), {
-            val bmp = ImageUtils.decodeScaled(p.file, EDIT_DIM)
+            val bmp = ImageUtils.decodeScaled(p.base, EDIT_DIM)
             val cut = ImageUtils.findGutter(bmp)
             val left = Bitmap.createBitmap(bmp, 0, 0, cut, bmp.height)
             val right = Bitmap.createBitmap(bmp, cut, 0, bmp.width - cut, bmp.height)
-            val pl = newPage()
-            val pr = newPage()
-            ImageUtils.writeJpeg(left, pl.file, 92)
-            ImageUtils.writeJpeg(right, pr.file, 92)
+            val pl = newPage(enhance = p.enhance)
+            val pr = newPage(enhance = p.enhance)
+            ImageUtils.writeJpeg(left, pl.base, 95)
+            ImageUtils.writeJpeg(right, pr.base, 95)
             left.recycle(); right.recycle(); bmp.recycle()
+            render(pl)
+            render(pr)
             Pair(pl, pr)
         }) { (pl, pr) ->
             if (index in pages.indices) pages.removeAt(index).delete()
@@ -410,24 +468,19 @@ class MainActivity : AppCompatActivity() {
     // ----------------------------------------------------------------------
     // Kaydet (PDF / JPG / PNG) ve paylas
     // ----------------------------------------------------------------------
+    /** Alttan acilan pencere: PDF / JPG / PNG buyuk simgeli kutucuklar (vFlat gibi). */
     private fun askSave() {
         if (pages.isEmpty()) return
-        val items = arrayOf(
-            getString(R.string.save_opt_pdf),
-            getString(R.string.save_opt_jpg),
-            getString(R.string.save_opt_png)
-        )
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.save_title)
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> savePdf()
-                    1 -> saveImages(png = false)
-                    2 -> saveImages(png = true)
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        val sheet = BottomSheetDialog(this)
+        val sb = SheetSaveBinding.inflate(layoutInflater)
+        sb.iconPdf.setup("PDF", ContextCompat.getColor(this, R.color.fmt_pdf))
+        sb.iconJpg.setup("JPG", ContextCompat.getColor(this, R.color.fmt_jpg))
+        sb.iconPng.setup("PNG", ContextCompat.getColor(this, R.color.fmt_png))
+        sb.tilePdf.setOnClickListener { sheet.dismiss(); savePdf() }
+        sb.tileJpg.setOnClickListener { sheet.dismiss(); saveImages(png = false) }
+        sb.tilePng.setOnClickListener { sheet.dismiss(); saveImages(png = true) }
+        sheet.setContentView(sb.root)
+        sheet.show()
     }
 
     private fun buildPdf(files: List<File>): File {
@@ -622,8 +675,10 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: PageHolder, position: Int) {
             val p = pages[position]
-            h.b.pageLabel.text = getString(R.string.page_label, position + 1, pages.size)
             val (w, ht) = ImageUtils.size(p.file)
+            // "Sayfa 1 / 3 · 8,4 MP": sayfanin kac megapiksel oldugu (netlik gostergesi)
+            h.b.pageLabel.text = getString(R.string.page_label, position + 1, pages.size) +
+                "  ·  " + getString(R.string.page_mp, w.toLong() * ht / 1_000_000.0)
             // Genis cekim = buyuk ihtimalle iki sayfalik kitap -> "Ikiye Bol" goster
             h.b.btnSplit.visibility = if (w > ht * 1.15) View.VISIBLE else View.GONE
             val reqW = binding.pageList.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels

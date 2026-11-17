@@ -9,5 +9,8 @@
     <color name="surface">#FFFFFF</color>
     <color name="divider">#D5DEEA</color>
     <color name="danger">#C62828</color>
+    <color name="fmt_pdf">#D32F2F</color>
+    <color name="fmt_jpg">#1565C0</color>
+    <color name="fmt_png">#2E7D32</color>
     <color name="ic_launcher_background">#1565C0</color>
 </resources>

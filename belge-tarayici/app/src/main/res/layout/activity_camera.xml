@@ -16,6 +16,12 @@
         android:layout_height="match_parent"
         app:scaleType="fitCenter" />
 
+    <!-- Bulunan belgenin mavi isaretlemesi -->
+    <com.eser.belgetarayici.QuadOverlayView
+        android:id="@+id/overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <!-- Cekim aninda kisa beyaz parlama (cekildigini anla) -->
     <View
         android:id="@+id/shutterFlash"

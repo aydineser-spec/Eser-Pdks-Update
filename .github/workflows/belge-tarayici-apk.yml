@@ -80,12 +80,13 @@ jobs:
           Eski Eser Lens'i silmeden üstüne kurulur.
 
           **Bu sürümde:**
-          - Kendi kameramız: telefonun tam çözünürlüğünde çeker (Google tarayıcısı sayfayı ~1 MP'ye düşürüyordu, küçük yazılar bulanıktı)
-          - Çektikten sonra kâğıdın kenarları otomatik bulunur, sayfa düzleştirilir (emin değilse fotoğraf olduğu gibi kalır)
-          - Kırp orijinal fotoğrafı açar: kesilen kısım kaybolmaz, köşeler istediğin kadar düzeltilir
-          - Kaydet: PDF, JPG ya da PNG
+          - Kamerada mavi işaretleme: bulunan belge canlı olarak mavi alanla gösterilir
+          - Kamera ekranının üstünde çekim çözünürlüğü yazar (örn. "Çekim: 4000×3000 (12 MP)"); her sayfanın üstünde de kaç MP olduğu
+          - Otomatik iyileştirme (vFlat görünümü): koyu siyah, beyaz beyaz, net yazı, canlı renk; kâğıt belgede gölge silinir ve kâğıt beyazlar. Menüden kapatılabilir
+          - Kaydet: PDF / JPG / PNG büyük simgeli kutucuklarla
+          - Kendi kameramız: telefonun tam çözünürlüğünde çeker, kenarları otomatik bulur
+          - Kırp orijinal fotoğrafı açar: kesilen kısım kaybolmaz
           - Galeriden ekle ve Google tarayıcı ile tara: sağ üstteki menüde
-          - Görüntünün rengine/tonuna dokunan filtre yok, yapay zekâ yok
 
           Sürüm $VER · $DATE
           EOF

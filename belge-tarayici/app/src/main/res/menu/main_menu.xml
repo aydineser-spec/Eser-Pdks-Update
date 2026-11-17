@@ -21,4 +21,11 @@
         android:id="@+id/action_google"
         android:title="@string/menu_google"
         app:showAsAction="never" />
+    <!-- Acik: vFlat gorunumu (kagitta beyazlatma). Kapali: fotograf oldugu gibi -->
+    <item
+        android:id="@+id/action_auto"
+        android:checkable="true"
+        android:checked="true"
+        android:title="@string/menu_auto"
+        app:showAsAction="never" />
 </menu>

@@ -8,7 +8,8 @@
     <string name="scan_big">Belge Tara</string>
 
     <!-- Kamera -->
-    <string name="camera_hint">Belgeyi çerçeveye al ve çek. Yakınsa ekrana dokunup netle.</string>
+    <string name="camera_hint">Belge ekranı doldursun, mavi alan görününce çek. Ekrana dokunup netleyebilirsin.</string>
+    <string name="camera_resolution">Çekim: %1$d×%2$d (%3$.1f MP)</string>
     <string name="flash_off">Flaş: Kapalı</string>
     <string name="flash_on">Flaş: Açık</string>
     <string name="close">Kapat</string>
@@ -25,19 +26,24 @@
 
     <!-- Kaydet secenekleri -->
     <string name="save_title">Nasıl kaydedilsin?</string>
-    <string name="save_opt_pdf">PDF  (İndirilenler › EserLens)</string>
-    <string name="save_opt_jpg">Resim JPG  (Galeri › EserLens)</string>
-    <string name="save_opt_png">Resim PNG  (Galeri › EserLens)</string>
+    <string name="fmt_pdf">PDF</string>
+    <string name="fmt_pdf_sub">Belge\nİndirilenler</string>
+    <string name="fmt_jpg">JPG</string>
+    <string name="fmt_jpg_sub">Resim\nGaleri</string>
+    <string name="fmt_png">PNG</string>
+    <string name="fmt_png_sub">Kayıpsız resim\nGaleri</string>
 
     <!-- Ust menu -->
     <string name="menu_new">Yeni</string>
     <string name="menu_text">Yazıyı çıkar</string>
     <string name="menu_gallery_add">Galeriden ekle</string>
     <string name="menu_google">Google tarayıcı ile tara</string>
+    <string name="menu_auto">Otomatik iyileştirme</string>
 
     <!-- Sayfa karti -->
     <string name="page_count">%1$d sayfa</string>
     <string name="page_label">Sayfa %1$d / %2$d</string>
+    <string name="page_mp">%1$.1f MP</string>
     <string name="crop">Kırp</string>
     <string name="rotate">Döndür</string>
     <string name="split">İkiye Böl</string>

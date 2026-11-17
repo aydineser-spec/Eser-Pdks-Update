@@ -1,9 +1,14 @@
 # Eser Lens (Android belge tarayıcı)
 
 vFlat tarzı sade belge tarayıcı. Kendi kamerasıyla telefonun tam
-çözünürlüğünde çeker, kâğıdın kenarlarını bulup sayfayı düzleştirir.
-Yapay zekâ yok; görüntünün rengine/tonuna dokunan filtre yok.
-(OpenCV yalnızca kâğıdın köşelerini bulmak için kullanılır.)
+çözünürlüğünde çeker, kamerada belgeyi canlı olarak mavi alanla gösterir,
+kâğıdın kenarlarını bulup sayfayı düzleştirir. Yapay zekâ yok.
+
+**Otomatik iyileştirme** (menüden kapatılabilir), kullanıcının vFlat çıktısı
+ölçülerek ayarlandı:
+- Kâğıt belge: gölge silinir, kâğıt beyazlar, yazı koyulaşır; mühür rengi korunur.
+- Kutu, dergi, fotoğraf: siyah koyu, beyaz beyaz, yazı net, renk canlı.
+  İnce kumlanma büyütülmez.
 
 ## Nasıl kullanılır
 

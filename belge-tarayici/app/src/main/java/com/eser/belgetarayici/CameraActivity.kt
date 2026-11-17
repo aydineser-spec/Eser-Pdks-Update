@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
@@ -17,8 +18,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
@@ -27,6 +30,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.eser.belgetarayici.databinding.ActivityCameraBinding
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * Eser Lens'in kendi kamerasi (vFlat gibi): telefonun TAM cozunurlugunde ceker.
@@ -49,6 +53,9 @@ class CameraActivity : AppCompatActivity() {
     private val shots = ArrayList<String>()
     private var flashOn = false
     private var capturing = false
+    private val analysisExecutor = Executors.newSingleThreadExecutor()
+    @Volatile private var lastAnalysis = 0L
+    @Volatile private var missCount = 0
 
     private val permLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -108,16 +115,83 @@ class CameraActivity : AppCompatActivity() {
                     .setJpegQuality(95)
                     .setFlashMode(ImageCapture.FLASH_MODE_OFF)
                     .build()
+                // Canli kenar bulma icin kucuk (~640x480) kareler
+                val analysisSelector = ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                    .setResolutionStrategy(
+                        ResolutionStrategy(
+                            Size(640, 480),
+                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                        )
+                    )
+                    .build()
+                val analysis = ImageAnalysis.Builder()
+                    .setResolutionSelector(analysisSelector)
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                    .build()
+                analysis.setAnalyzer(analysisExecutor) { proxy -> analyzeFrame(proxy) }
+
                 provider.unbindAll()
-                camera = provider.bindToLifecycle(
-                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture
-                )
+                camera = try {
+                    provider.bindToLifecycle(
+                        this, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis
+                    )
+                } catch (e: Throwable) {
+                    // Bazi telefonlar ucunu birden desteklemez: mavi alan olmadan devam
+                    provider.unbindAll()
+                    provider.bindToLifecycle(
+                        this, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture
+                    )
+                }
                 imageCapture = capture
+                showCaptureResolution(capture)
                 setupTapToFocus()
             } catch (e: Throwable) {
                 fallback(R.string.camera_failed)
             }
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    /** Ust yaziya cekim cozunurlugunu ekle (ornek: "Cekim: 4000×3000 (12 MP)"). */
+    private fun showCaptureResolution(capture: ImageCapture) {
+        val res = try { capture.resolutionInfo?.resolution } catch (e: Throwable) { null } ?: return
+        val mp = res.width.toLong() * res.height / 1_000_000.0
+        binding.hint.text = getString(R.string.camera_hint) + "\n" +
+            getString(R.string.camera_resolution, res.width, res.height, mp)
+    }
+
+    /**
+     * Canli kenar bulma: ~6 kare/sn, kucuk kare uzerinde EdgeDetector.
+     * Bulunan belge mavi alanla gosterilir; 3 kare ust uste bulunamazsa alan gizlenir.
+     */
+    private fun analyzeFrame(proxy: ImageProxy) {
+        try {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastAnalysis < 150) return
+            lastAnalysis = now
+            val bmp = proxy.toBitmap()
+            val upright = ImageUtils.rotateQuarters(bmp, proxy.imageInfo.rotationDegrees / 90)
+            if (upright !== bmp) bmp.recycle()
+            val aspect = upright.width.toFloat() / upright.height
+            val q = EdgeDetector.detect(upright)
+            upright.recycle()
+            if (q == null) missCount++ else missCount = 0
+            val show = if (q == null && missCount < 3) return else q
+            runOnUiThread {
+                binding.overlay.imageAspect = aspect
+                binding.overlay.setQuad(show)
+            }
+        } catch (e: Throwable) {
+            // canli isaretleme olmazsa cekim yine calisir
+        } finally {
+            proxy.close()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        analysisExecutor.shutdown()
     }
 
     /** Ekrana dokununca o noktaya netle (yakin cekimde yazi keskin olsun). */
