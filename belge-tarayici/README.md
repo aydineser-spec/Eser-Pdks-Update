@@ -29,10 +29,13 @@ ve sayfayı bozmaz.
 APK, GitHub üzerinde otomatik olarak derlenir. `belge-tarayici/` klasöründe
 bir değişiklik olunca `.github/workflows/belge-tarayici-apk.yml` iş akışı çalışır ve:
 
-1. **Actions** sekmesindeki ilgili çalışmanın altında `BelgeTarayici-APK`
+1. **Actions** sekmesindeki ilgili çalışmanın altında `EserLens-APK`
    adlı çıktıyı (artifact) oluşturur,
-2. **Releases** bölümünde `belge-tarayici-latest` etiketiyle `BelgeTarayici.apk`
-   dosyasını yayınlar.
+2. **Releases** bölümündeki `eser-lens` sürüm sayfasını her seferinde
+   sıfırdan açar. Başlıkta sürüm ve tarih yazar (ör. "Eser Lens 1.0.47 (17.11.2026)").
+   Telefona kurulacak dosya `EserLens.apk`.
+
+Sürüm sayfası: https://github.com/aydineser-spec/Eser-Pdks-Update/releases/tag/eser-lens
 
 Telefonda: APK'yı indir → aç → "bilinmeyen kaynaklardan kuruluma izin ver" →
 kur. İmza sabit olduğu için eski sürümü silmeden üstüne kurulur.

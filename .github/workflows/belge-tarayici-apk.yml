@@ -49,22 +49,46 @@ jobs:
       - name: APK'yı yeniden adlandır
         run: |
           mkdir -p ../out
-          cp app/build/outputs/apk/debug/app-debug.apk ../out/BelgeTarayici.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../out/EserLens.apk
           ls -la ../out
 
       - name: APK'yı iş çıktısı (artifact) olarak yükle
         uses: actions/upload-artifact@v4
         with:
-          name: BelgeTarayici-APK
-          path: out/BelgeTarayici.apk
+          name: EserLens-APK
+          path: out/EserLens.apk
           if-no-files-found: error
 
-      - name: APK'yı Release olarak yayınla
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: belge-tarayici-latest
-          name: Belge Tarayıcı (son sürüm)
-          body: |
-            Telefona kurulabilir hazır APK. İndir, aç ve "bilinmeyen kaynaklara izin ver" deyip kur.
-          files: out/BelgeTarayici.apk
-          fail_on_unmatched_files: true
+      # Surum sayfasi her derlemede SIFIRDAN acilir: baslik, tarih ve aciklama hep
+      # guncel gorunur. Eski "Belge Tarayici (son surum)" sayfasi 16 Temmuz tarihli
+      # gorunup kafa karistiriyordu; o da silinir.
+      - name: Sürüm sayfasını yenile (eskisini sil, yenisini aç)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          REPO="$GITHUB_REPOSITORY"
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          DATE="$(TZ=Europe/Istanbul date +%d.%m.%Y)"
+          gh release delete belge-tarayici-latest --repo "$REPO" --cleanup-tag --yes || true
+          gh release delete eser-lens --repo "$REPO" --cleanup-tag --yes || true
+          sleep 5
+          cat > ../out/notlar.md <<EOF
+          Telefona kurulacak dosya: aşağıdaki **EserLens.apk**
+
+          **Nasıl kurulur:** EserLens.apk'ya dokun → indir → aç → "bilinmeyen kaynaklara izin ver" → Yükle.
+          Eski Eser Lens'i silmeden üstüne kurulur.
+
+          **Bu sürümde:**
+          - Yapay zekâ tamamen kaldırıldı (sayfaları bozuyordu)
+          - Uygulama açılınca kamera hemen açılır, belgeyi bulunca kendisi çeker
+          - Her sayfanın altında: Kırp / Döndür / Sil (kitap çekiminde İkiye Böl)
+          - Altta sadece: Orijinal / Net Belge / Siyah-Beyaz ve + Sayfa / PDF Kaydet / Paylaş
+          - Net Belge artık silik ve kurşun kalem yazıyı silmiyor
+          - Kırp ve Döndür artık sadece o sayfaya uygulanıyor
+
+          Sürüm $VER · $DATE
+          EOF
+          gh release create eser-lens ../out/EserLens.apk --repo "$REPO" \
+            --target "$GITHUB_SHA" --title "Eser Lens $VER ($DATE)" \
+            --notes-file ../out/notlar.md --latest
