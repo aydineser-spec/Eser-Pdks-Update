@@ -3,11 +3,18 @@ package com.eser.belgetarayici
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Patterns
 import android.util.Size
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
@@ -29,8 +36,15 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.eser.belgetarayici.databinding.ActivityCameraBinding
+import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Eser Lens'in kendi kamerasi (vFlat gibi): telefonun TAM cozunurlugunde ceker.
@@ -57,10 +71,23 @@ class CameraActivity : AppCompatActivity() {
     @Volatile private var lastAnalysis = 0L
     @Volatile private var missCount = 0
 
+    // QR kod tanima (ML Kit, cihazda)
+    private var qrScanner: BarcodeScanner? = null
+    @Volatile private var lastQrCheck = 0L
+    private var lastQrSeen = 0L
+    private var currentQr: String? = null
+    private var dismissedQr: String? = null
+
     private val permLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) startCamera() else fallback(R.string.camera_permission_denied)
+    }
+
+    private val galleryLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (!uris.isNullOrEmpty()) importFromGallery(uris)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,9 +96,22 @@ class CameraActivity : AppCompatActivity() {
         setContentView(binding.root)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        qrScanner = try {
+            BarcodeScanning.getClient(
+                BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+            )
+        } catch (e: Throwable) {
+            null
+        }
+
         binding.btnShutter.setOnClickListener { takePhoto() }
         binding.btnDone.setOnClickListener { finishWithShots() }
         binding.btnFlash.setOnClickListener { toggleFlash() }
+        binding.btnGallery.setOnClickListener { galleryLauncher.launch("image/*") }
+        binding.btnQrOpen.setOnClickListener { openQr() }
+        binding.btnQrCopy.setOnClickListener { copyQr() }
+        binding.btnQrShare.setOnClickListener { shareQr() }
+        binding.btnQrClose.setOnClickListener { closeQr() }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { finishWithShots() }
         })
@@ -162,8 +202,9 @@ class CameraActivity : AppCompatActivity() {
     }
 
     /**
-     * Canli kenar bulma: ~6 kare/sn, kucuk kare uzerinde EdgeDetector.
-     * Bulunan belge mavi alanla gosterilir; 3 kare ust uste bulunamazsa alan gizlenir.
+     * Canli inceleme (~6 kare/sn, kucuk kare):
+     *  - QR kod (~2.5 kez/sn): bulunursa ustte QR karti
+     *  - Kenar bulma: belge mavi alanla gosterilir; 3 kare ust uste bulunamazsa gizlenir
      */
     private fun analyzeFrame(proxy: ImageProxy) {
         try {
@@ -174,24 +215,137 @@ class CameraActivity : AppCompatActivity() {
             val upright = ImageUtils.rotateQuarters(bmp, proxy.imageInfo.rotationDegrees / 90)
             if (upright !== bmp) bmp.recycle()
             val aspect = upright.width.toFloat() / upright.height
+
+            if (now - lastQrCheck >= 400) {
+                lastQrCheck = now
+                val qr = detectQr(upright)
+                if (qr != null) runOnUiThread { showQr(qr) }
+            }
+
             val q = EdgeDetector.detect(upright)
             upright.recycle()
             if (q == null) missCount++ else missCount = 0
-            val show = if (q == null && missCount < 3) return else q
-            runOnUiThread {
-                binding.overlay.imageAspect = aspect
-                binding.overlay.setQuad(show)
+            if (q != null || missCount >= 3) {
+                runOnUiThread {
+                    binding.overlay.imageAspect = aspect
+                    binding.overlay.setQuad(q)
+                }
             }
         } catch (e: Throwable) {
-            // canli isaretleme olmazsa cekim yine calisir
+            // canli inceleme olmazsa cekim yine calisir
         } finally {
             proxy.close()
         }
     }
 
+    /** Karede QR kod varsa icerigi (ML Kit, cihazda; internet gerekmez). */
+    private fun detectQr(bmp: Bitmap): String? {
+        val s = qrScanner ?: return null
+        return try {
+            val codes = Tasks.await(s.process(InputImage.fromBitmap(bmp, 0)), 1500, TimeUnit.MILLISECONDS)
+            codes.firstOrNull { !it.rawValue.isNullOrBlank() }?.rawValue
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // QR karti
+    // ----------------------------------------------------------------------
+    private fun showQr(value: String) {
+        lastQrSeen = SystemClock.uptimeMillis()
+        if (value == dismissedQr) return                       // kapatildiysa ayni kod tekrar acilmasin
+        if (value == currentQr && binding.qrCard.visibility == View.VISIBLE) return
+        currentQr = value
+        binding.qrText.text = value
+        binding.btnQrOpen.visibility = if (looksLikeUrl(value)) View.VISIBLE else View.GONE
+        binding.qrCard.visibility = View.VISIBLE
+        binding.qrCard.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        binding.qrCard.removeCallbacks(hideQrIfStale)
+        binding.qrCard.postDelayed(hideQrIfStale, 1000)
+    }
+
+    /** QR 6 sn gorulmezse kart kendiliginden kapanir. */
+    private val hideQrIfStale: Runnable = object : Runnable {
+        override fun run() {
+            if (SystemClock.uptimeMillis() - lastQrSeen > 6000) {
+                binding.qrCard.visibility = View.GONE
+                currentQr = null
+            } else {
+                binding.qrCard.postDelayed(this, 1000)
+            }
+        }
+    }
+
+    private fun looksLikeUrl(v: String): Boolean {
+        val t = v.trim()
+        return t.startsWith("http://", true) || t.startsWith("https://", true) ||
+            (!t.contains(' ') && Patterns.WEB_URL.matcher(t).matches())
+    }
+
+    private fun openQr() {
+        val v = currentQr?.trim() ?: return
+        val url = if (v.startsWith("http://", true) || v.startsWith("https://", true)) v else "https://$v"
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: Throwable) {
+            Toast.makeText(this, getString(R.string.qr_open_failed), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun copyQr() {
+        val v = currentQr ?: return
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("QR", v))
+        Toast.makeText(this, getString(R.string.copied), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun shareQr() {
+        val v = currentQr ?: return
+        val i = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, v) }
+        startActivity(Intent.createChooser(i, getString(R.string.share)))
+    }
+
+    private fun closeQr() {
+        dismissedQr = currentQr
+        currentQr = null
+        binding.qrCard.visibility = View.GONE
+    }
+
+    // ----------------------------------------------------------------------
+    // Galeri: secilen fotograflar kamera cekimi gibi islenir (kenar bulma dahil),
+    // sonra ana ekranda "Kirp" ile istedigin gibi duzeltilir
+    // ----------------------------------------------------------------------
+    private fun importFromGallery(uris: List<Uri>) {
+        binding.btnGallery.isEnabled = false
+        Thread {
+            val dir = File(filesDir, "output").apply { mkdirs() }
+            val added = ArrayList<String>()
+            for (u in uris) {
+                val f = File(dir, "galeri_${System.nanoTime()}.jpg")
+                try {
+                    contentResolver.openInputStream(u)?.use { input ->
+                        f.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    if (f.exists() && f.length() > 0) added.add(f.absolutePath) else f.delete()
+                } catch (e: Throwable) {
+                    f.delete()
+                }
+            }
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                binding.btnGallery.isEnabled = true
+                shots.addAll(added)
+                updateDone()
+                if (added.isNotEmpty()) finishWithShots()   // hemen sayfalara don
+            }
+        }.start()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         analysisExecutor.shutdown()
+        try { qrScanner?.close() } catch (e: Throwable) { }
     }
 
     /** Ekrana dokununca o noktaya netle (yakin cekimde yazi keskin olsun). */

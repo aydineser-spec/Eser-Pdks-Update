@@ -4,12 +4,17 @@
 
     <!-- Bos ekran -->
     <string name="empty_title">Belge taramaya hazır</string>
-    <string name="empty_subtitle">Belgeyi kameraya göster ve çek. Kenarlarını kendisi bulup sayfayı düzleştirir.\n\nGaleriden fotoğraf eklemek için sağ üstteki menüyü kullan.</string>
+    <string name="empty_subtitle">Belgeyi kameraya göster ve çek. Kenarlarını kendisi bulup sayfayı düzleştirir. QR kodları da tanır.\n\nGalerideki bir fotoğrafı eklemek için aşağıdaki Galeriden Seç\'e bas; sonra Kırp ile düzeltebilirsin.</string>
     <string name="scan_big">Belge Tara</string>
 
     <!-- Kamera -->
     <string name="camera_hint">Belge ekranı doldursun, mavi alan görününce çek. Ekrana dokunup netleyebilirsin.</string>
     <string name="camera_resolution">Çekim: %1$d×%2$d (%3$.1f MP)</string>
+    <string name="gallery">Galeri</string>
+    <string name="qr_title">QR kod bulundu</string>
+    <string name="qr_open">Aç</string>
+    <string name="qr_copy">Kopyala</string>
+    <string name="qr_open_failed">Bağlantı açılamadı</string>
     <string name="flash_off">Flaş: Kapalı</string>
     <string name="flash_on">Flaş: Açık</string>
     <string name="close">Kapat</string>

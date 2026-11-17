@@ -175,6 +175,7 @@ class MainActivity : AppCompatActivity() {
         binding.pageList.adapter = adapter
 
         binding.btnScanBig.setOnClickListener { startScan(add = false) }
+        binding.btnGalleryBig.setOnClickListener { addMode = false; galleryLauncher.launch("image/*") }
         binding.btnAddPage.setOnClickListener { startScan(add = true) }
         binding.btnSave.setOnClickListener { askSave() }
         binding.btnShare.setOnClickListener { sharePdf() }

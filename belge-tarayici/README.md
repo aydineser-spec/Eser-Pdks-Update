@@ -12,12 +12,17 @@ kâğıdın kenarlarını bulup sayfayı düzleştirir. Yapay zekâ yok.
 
 ## Nasıl kullanılır
 
-1. **Uygulamayı aç:** Kamera kendiliğinden açılır. Belgeyi çerçeveye al ve
-   büyük beyaz düğmeyle çek; art arda birden çok sayfa çekebilirsin. Yakın
-   çekimde ekrana dokunarak netle. Bitince **Bitti**'ye bas. Kenarlar otomatik
-   bulunur ve sayfa düzleştirilir; emin olmadığı fotoğrafı olduğu gibi bırakır.
-   Galeriden fotoğraf eklemek ya da Google'ın tarayıcısını kullanmak için
-   sağ üstteki menüyü aç.
+1. **Uygulamayı aç:** Kamera kendiliğinden açılır. Belgeyi çerçeveye al, mavi
+   alan görününce büyük beyaz düğmeyle çek; art arda birden çok sayfa
+   çekebilirsin. Yakın çekimde ekrana dokunarak netle. Bitince **Bitti**'ye bas.
+   Kenarlar otomatik bulunur ve sayfa düzleştirilir; emin olmadığı fotoğrafı
+   olduğu gibi bırakır.
+   - **QR kod:** Kamera bir QR görünce üstte kart çıkar: **Aç** (bağlantıysa),
+     **Kopyala**, **Paylaş**.
+   - **Galeri:** Kamera ekranının sol altındaki **Galeri** (ya da boş ekrandaki
+     **Galeriden Seç**). Seçilen fotoğrafın kenarları da otomatik bulunur;
+     beğenmezsen **Kırp** ile düzelt.
+   - Google'ın tarayıcısı: sağ üstteki menüde.
 2. **Sayfaları kontrol et:** Her sayfanın altında kendi düğmeleri var:
    - **Kırp:** Orijinal fotoğraf açılır, yeşil köşeler otomatik bulunan yerde
      başlar; sürükleyip **Tamam**'a bas. Kesilen kısım kaybolmaz, tekrar
