@@ -30,12 +30,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Android SDK kur
-        uses: android-actions/setup-android@v3
-
+      # Sunucuda hazir kurulu Android SDK kullanilir (setup-android@v3 artik
+      # olmayan "tools" paketini istedigi icin derlemeyi bozuyordu)
       - name: Gerekli SDK bileşenlerini yükle
         run: |
-          yes | sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" || true
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          echo "sdkmanager: $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          yes | "$SDKM" "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null || true
 
       - name: gradlew çalıştırılabilir yap
         run: chmod +x ./gradlew

@@ -72,8 +72,8 @@ object ImageUtils {
 
     /**
      * Iki sayfalik kitap cekiminde ortadaki cilt cizgisini bulur (x konumu).
-     * Ortanin %38-%62 araliginda en koyu dikey seridi arar (cilt golgesi);
-     * belirgin bir golge yoksa tam ortadan boler.
+     * Ortanin %38-%62 araliginda, iki yanindan belirgin koyu dar seridi arar
+     * (cilt golgesi); belirgin bir golge yoksa tam ortadan boler.
      */
     fun findGutter(bmp: Bitmap): Int {
         val w = bmp.width
@@ -98,19 +98,25 @@ object ImageUtils {
                     col[cx] += (r * 299 + g * 587 + b * 114) / 1000.0
                 }
             }
+            // Cilt = iki yanindan da (%5 genislik otede) belirgin koyu DAR serit.
+            // Sadece "en koyu kolon"a bakmak, golge yokken yazi satirlarini
+            // cilt sanip sayfayi yazinin ortasindan kesiyordu.
+            fun win(c: Int): Double {
+                var v = 0.0
+                for (k in -2..2) v += col[(c + k).coerceIn(0, sw - 1)]
+                return v
+            }
             val from = (sw * 0.38).toInt()
             val to = (sw * 0.62).toInt()
-            var best = sw / 2
-            var bestV = Double.MAX_VALUE
-            var sum = 0.0
+            val d = (sw * 0.05).toInt()
+            var best = -1
+            var bestScore = 0.0
             for (cx in from..to) {
-                var v = 0.0
-                for (k in -2..2) v += col[(cx + k).coerceIn(0, sw - 1)]
-                sum += v
-                if (v < bestV) { bestV = v; best = cx }
+                val v = win(cx)
+                val side = minOf(win(cx - d), win(cx + d))
+                if (v < side * 0.93 && side - v > bestScore) { bestScore = side - v; best = cx }
             }
-            val avg = sum / (to - from + 1)
-            if (bestV < avg * 0.97) (best.toLong() * w / sw).toInt() else center
+            if (best >= 0) (best.toLong() * w / sw).toInt() else center
         } catch (e: Throwable) {
             center
         }
